@@ -1,12 +1,6 @@
 import type { DomainEvent } from '@gtarp/event-schema';
 import type { Job } from 'bullmq';
 
-export interface ConsumerRegistration {
-  name: string;
-  subjects: string[];
-  handler: (job: Job<DomainEvent>) => Promise<void>;
-}
-
 export const CONSUMER_NAMES = [
   'reputation',
   'story',
@@ -17,10 +11,24 @@ export const CONSUMER_NAMES = [
 ] as const;
 export type ConsumerName = (typeof CONSUMER_NAMES)[number];
 
-const registryMap = new Map<string, ConsumerRegistration>();
+export interface ConsumerRegistration {
+  // Narrowing `name` to the ConsumerName union prevents registering for a
+  // queue that does not exist — a string-typed name would only fail at
+  // enqueue time when `queues.get(name)` returned undefined.
+  name: ConsumerName;
+  subjects: string[];
+  handler: (job: Job<DomainEvent>) => Promise<void>;
+}
+
+const registryMap = new Map<ConsumerName, ConsumerRegistration>();
 
 export function registerConsumer(reg: ConsumerRegistration): void {
   registryMap.set(reg.name, reg);
+}
+
+/** Test-only: wipe the consumer registry between cases. */
+export function _resetRegistryForTests(): void {
+  registryMap.clear();
 }
 
 export function getRegisteredConsumers(): ConsumerRegistration[] {
@@ -32,6 +40,8 @@ export function getConsumersForSubject(subject: string): ConsumerRegistration[] 
     r.subjects.some((s) => subjectMatches(s, subject)),
   );
 }
+
+export { subjectMatches as _subjectMatchesForTests };
 
 /**
  * NATS-style wildcard matching.
