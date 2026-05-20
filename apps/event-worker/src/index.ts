@@ -3,6 +3,8 @@ import { connect, RetentionPolicy, StorageType } from 'nats';
 import { Redis } from 'ioredis';
 import Fastify from 'fastify';
 import { healthzPlugin } from './healthz.js';
+import { startBridge } from './bridge/index.js';
+import { registry } from './metrics.js';
 
 function parsePort(raw: string | undefined, fallback: number, name: string): number {
   if (raw === undefined || raw === '') return fallback;
@@ -70,14 +72,22 @@ async function main() {
   );
   redis.on('error', (err: Error) => console.error('[event-worker] Redis error:', err));
 
+  // ── BullMQ bridge ─────────────────────────────────────────────────────────
+  const bridge = await startBridge({ natsUrl: NATS_URL, redisUrl: REDIS_URL });
+  console.log('[event-worker] BullMQ bridge started');
+
   // ── Heartbeat ─────────────────────────────────────────────────────────────
   const heartbeat = setInterval(() => {
     console.log(`[event-worker] heartbeat ${new Date().toISOString()}`);
   }, 30_000);
 
-  // ── HTTP /healthz ─────────────────────────────────────────────────────────
+  // ── HTTP /healthz + /metrics ──────────────────────────────────────────────
   const app = Fastify({ logger: false });
   await app.register(healthzPlugin);
+  app.get('/metrics', async (_req, reply) => {
+    const text = await registry.metrics();
+    return reply.type('text/plain; version=0.0.4').send(text);
+  });
   await app.listen({ port: PORT, host: '0.0.0.0' });
   console.log(`[event-worker] /healthz listening on port ${PORT}`);
 
@@ -89,6 +99,7 @@ async function main() {
     console.log(`[event-worker] ${signal} received — shutting down`);
     clearInterval(heartbeat);
     await app.close();
+    await bridge.close();
     redis.disconnect();
     await nc.drain();
     process.exit(0);
