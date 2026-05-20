@@ -1,0 +1,5 @@
+# Development infrastructure — start with `docker compose up -d`
+# This brings up Postgres, Redis, NATS (JetStream), and Mailhog.
+# Then run `pnpm dev` to start backend + event-worker + ai-orchestrator.
+include:
+  - infra/docker/docker-compose.yml

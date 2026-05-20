@@ -44,6 +44,8 @@ jobs:
     env:
       DATABASE_URL: postgresql://gtarp:gtarp@localhost:5432/gtarp_test
       REDIS_URL: redis://localhost:6379
+      NATS_URL: nats://localhost:4222
+      FIVEM_INGEST_TOKEN: ci-test-ingest-token
 
     steps:
       - uses: actions/checkout@v6

@@ -174,6 +174,9 @@ importers:
         specifier: ^15.1.3
         version: 15.1.3
     devDependencies:
+      '@gtarp/backend':
+        specifier: workspace:*
+        version: link:../backend
       '@types/node':
         specifier: ^22.10.0
         version: 22.19.19
