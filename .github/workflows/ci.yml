@@ -41,6 +41,12 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
+      nats:
+        image: nats:2.10-alpine
+        command: ['-js']
+        ports:
+          - 4222:4222
+
     env:
       DATABASE_URL: postgresql://gtarp:gtarp@localhost:5432/gtarp_test
       REDIS_URL: redis://localhost:6379
@@ -59,6 +65,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm -F @gtarp/db prisma:generate
+
+      - name: Install psql client
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Run Prisma migrations
+        run: pnpm -F @gtarp/db prisma:deploy
+
+      - name: Smoke check DB schema
+        run: psql $DATABASE_URL -c 'SELECT 1 FROM "Player" LIMIT 1'
 
       - run: pnpm lint
       - run: pnpm typecheck
