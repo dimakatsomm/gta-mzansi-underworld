@@ -58,6 +58,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Start NATS with JetStream
+        run: docker run -d --name nats-js -p 4222:4222 nats:2.10-alpine -js && sleep 3
+
       - run: pnpm -F @gtarp/db prisma:generate
 
       - run: pnpm lint
