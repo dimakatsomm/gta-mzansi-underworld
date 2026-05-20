@@ -58,3 +58,11 @@ Never commit secrets. `.env.example` lists every required key. CI fails on detec
 ## 10. When In Doubt
 
 Open an ADR in `docs/adr/`. Cheap to write, saves arguments later.
+
+## 11. Commit Hooks — No `--no-verify` Policy
+
+`pnpm prepare` installs Husky. The `.husky/pre-commit` hook runs `lint-staged` on every commit.
+
+**Never pass `--no-verify` to bypass the hook** without explicit written sign-off from the project owner in the relevant GitHub issue. Bypassing hooks without approval is grounds for PR rejection.
+
+If a hook is blocking a legitimate commit (e.g., auto-generated file that cannot be linted), open an issue to fix the root cause. Workarounds that silence the tooling are not acceptable.
