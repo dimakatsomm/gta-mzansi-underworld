@@ -34,11 +34,13 @@ describe.skipIf(skip)('M1 cross-cutting E2E', () => {
   let bridge: Awaited<ReturnType<typeof startBridge>>;
   let redis: Redis;
 
-  // Stable test fixtures.
-  const E2E_PLAYER_ID = 'e0000000-0000-0000-0000-000000000001';
-  const E2E_GANG_ID = 'e0000000-0000-0000-0000-000000000002';
-  const E2E_CRIME_ID = 'e0000000-0000-0000-0000-000000000003';
-  const E2E_EVENT_ID = 'e0000000-0000-0000-0000-000000000004';
+  // Stable test fixtures. Player/Gang IDs are not validated by the DomainEvent
+  // schema (z.string()), but event id + crimeId go through z.uuid() so they
+  // must be valid RFC 9562 UUIDs (version digit 1-8 + variant digit 8/9/a/b).
+  const E2E_PLAYER_ID = 'e0000000-0000-4000-8000-000000000001';
+  const E2E_GANG_ID = 'e0000000-0000-4000-8000-000000000002';
+  const E2E_CRIME_ID = 'e0000000-0000-4000-8000-000000000003';
+  const E2E_EVENT_ID = 'e0000000-0000-4000-8000-000000000004';
   const INGEST_TOKEN = 'e2e-test-token';
 
   beforeAll(async () => {
@@ -158,6 +160,10 @@ describe.skipIf(skip)('M1 cross-cutting E2E', () => {
       },
       payload: event,
     });
+    if (res.statusCode !== 201) {
+      // Surface zod issues if validation fails — silent 400s burn CI cycles.
+      console.error('POST /events failed:', res.statusCode, res.body);
+    }
     expect(res.statusCode).toBe(201);
     const body = JSON.parse(res.body) as { id: string; seq: number };
     expect(body.id).toBe(E2E_EVENT_ID);
