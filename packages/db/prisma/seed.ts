@@ -4,24 +4,16 @@
  * All rows keyed on stable UUIDs / unique fields for idempotent upserts.
  */
 import { PrismaClient } from '@prisma/client';
-// Canonical SA names & places — lore-bible aligned, do not replace with ad-hoc strings.
-import {
-  FIRST_NAMES,
-  SURNAMES,
-  JOBURG_AREAS,
-  CAPE_TOWN_AREAS,
-  DURBAN_AREAS,
-} from '@gtarp/sa-content';
+import { PrismaPg } from '@prisma/adapter-pg';
 
-// Silence unused-var linter — these imports document provenance and may be
-// used in future expansions.
-void FIRST_NAMES;
-void SURNAMES;
-void JOBURG_AREAS;
-void CAPE_TOWN_AREAS;
-void DURBAN_AREAS;
-
-const prisma = new PrismaClient();
+const connectionString = process.env['DATABASE_URL'];
+if (!connectionString) {
+  throw new Error('DATABASE_URL is not set — required by @prisma/adapter-pg for seeding.');
+}
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString }),
+  log: ['warn', 'error'],
+});
 
 // ── Stable IDs ──────────────────────────────────────────────────────────────
 // Hardcoded so upserts are truly idempotent across repeated seed runs.
@@ -533,9 +525,13 @@ async function main() {
   // 1. Gangs
   console.log('  → gangs');
   for (const gang of GANGS) {
+    // Upsert by id so dependent rows (memberships, territories) keying off
+    // GANG_IDS always reference the canonical UUID. If a prior row exists with
+    // the same name under a different id, the create branch would conflict on
+    // the unique name constraint — that's intentional, surface the divergence.
     await prisma.gang.upsert({
-      where: { name: gang.name },
-      update: { colors: gang.colors, reputation: gang.reputation },
+      where: { id: gang.id },
+      update: { name: gang.name, colors: gang.colors, reputation: gang.reputation },
       create: gang,
     });
   }

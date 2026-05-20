@@ -254,9 +254,6 @@ importers:
 
   packages/db:
     dependencies:
-      '@gtarp/sa-content':
-        specifier: workspace:*
-        version: link:../sa-content
       '@prisma/adapter-pg':
         specifier: ^7.8.0
         version: 7.8.0
