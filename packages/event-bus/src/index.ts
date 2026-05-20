@@ -3,15 +3,16 @@ import {
   StringCodec,
   RetentionPolicy,
   StorageType,
+  AckPolicy,
   DeliverPolicy,
+  ReplayPolicy,
   nanos,
-  consumerOpts,
   type NatsConnection,
   type JetStreamClient,
   type JetStreamManager,
-  type JetStreamSubscription,
   type JsMsg,
   type StreamConfig,
+  type ConsumerConfig,
 } from 'nats';
 import { DomainEvent } from '@gtarp/event-schema';
 import type { ZodError } from 'zod';
@@ -28,13 +29,18 @@ export interface SubscribeOpts {
   deliverPolicy?: 'all' | 'new' | 'last';
 }
 
+/** Opaque handle returned by subscribe — call close() to stop consuming. */
+export interface Subscription {
+  close(): void;
+}
+
 export interface EventBus {
   publish(event: DomainEvent): Promise<{ seq: number }>;
   subscribe(
     subjectPattern: string,
     handler: (evt: DomainEvent, msg: JsMsg) => Promise<void>,
     opts?: SubscribeOpts,
-  ): Promise<JetStreamSubscription>;
+  ): Promise<Subscription>;
   ensureStream(name?: string, subjects?: string[]): Promise<void>;
   close(): Promise<void>;
 }
@@ -69,7 +75,7 @@ export async function connect(opts?: { servers?: string | string[] }): Promise<E
       subjectPattern: string,
       handler: (evt: DomainEvent, msg: JsMsg) => Promise<void>,
       subscribeOpts?: SubscribeOpts,
-    ): Promise<JetStreamSubscription> {
+    ): Promise<Subscription> {
       const durableName =
         subscribeOpts?.durableName ?? subjectPattern.replace(/[^a-zA-Z0-9_-]/g, '_');
 
@@ -80,30 +86,29 @@ export async function connect(opts?: { servers?: string | string[] }): Promise<E
       };
       const deliverPolicy = deliverPolicyMap[subscribeOpts?.deliverPolicy ?? 'all'];
 
-      const copts = consumerOpts();
-      copts.durable(durableName);
-      copts.ackExplicit();
-      copts.maxDeliver(5);
-      copts.ackWait(30_000); // 30s in millis
-      copts.filterSubject(subjectPattern);
-      copts.manualAck();
-      // NOTE: do not call bindStream() — it requires the consumer to already
-      // exist with a deliver_subject, causing "push consumer requires deliver_subject".
-      // Let nats.js discover the stream from the subject pattern and auto-create
-      // the push consumer with a generated inbox.
+      // Durable pull consumer — no deliver_subject needed (avoids push-consumer issues).
+      const consumerConfig: Partial<ConsumerConfig> = {
+        durable_name: durableName,
+        ack_policy: AckPolicy.Explicit,
+        max_deliver: 5,
+        ack_wait: nanos(30_000), // 30 s in nanoseconds
+        filter_subject: subjectPattern,
+        deliver_policy: deliverPolicy,
+        replay_policy: ReplayPolicy.Instant,
+      };
 
-      if (deliverPolicy === DeliverPolicy.All) {
-        copts.deliverAll();
-      } else if (deliverPolicy === DeliverPolicy.New) {
-        copts.deliverNew();
-      } else if (deliverPolicy === DeliverPolicy.Last) {
-        copts.deliverLast();
+      try {
+        await jsm.consumers.info(STREAM_NAME, durableName);
+        await jsm.consumers.update(STREAM_NAME, durableName, consumerConfig);
+      } catch {
+        await jsm.consumers.add(STREAM_NAME, consumerConfig);
       }
 
-      const sub = await js.subscribe(subjectPattern, copts);
+      const consumer = await js.consumers.get(STREAM_NAME, durableName);
+      const msgs = await consumer.consume();
 
       void (async () => {
-        for await (const msg of sub) {
+        for await (const msg of msgs) {
           try {
             const raw: unknown = JSON.parse(sc.decode(msg.data));
             const parsed = DomainEvent.safeParse(raw);
@@ -117,7 +122,7 @@ export async function connect(opts?: { servers?: string | string[] }): Promise<E
               msg.ack();
               continue;
             }
-            await handler(parsed.data, msg);
+            await handler(parsed.data, msg as unknown as JsMsg);
           } catch (err) {
             // Handler error — do not ack, allow redelivery up to maxDeliver
             console.error('[event-bus] handler error', err);
@@ -125,7 +130,7 @@ export async function connect(opts?: { servers?: string | string[] }): Promise<E
         }
       })();
 
-      return sub;
+      return { close: () => msgs.close() };
     },
 
     async ensureStream(name = STREAM_NAME, subjects = STREAM_SUBJECTS): Promise<void> {
