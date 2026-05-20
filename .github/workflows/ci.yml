@@ -68,6 +68,28 @@ jobs:
       - name: Smoke check DB schema
         run: psql "$DATABASE_URL" -c "SELECT to_regclass('\"Player\"') IS NOT NULL"
 
+      - name: Seed sample data
+        run: pnpm -F @gtarp/db seed
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Smoke check seed counts (exact)
+        run: |
+          COUNT=$(psql "$DATABASE_URL" -t -c 'SELECT count(*) FROM "Player"' | tr -d ' ')
+          echo "Player count: $COUNT"
+          [ "$COUNT" -eq 8 ] || (echo "Expected exactly 8 players, got $COUNT" && exit 1)
+
+      - name: Re-run seed (idempotency check)
+        run: pnpm -F @gtarp/db seed
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Smoke check seed counts after re-run
+        run: |
+          COUNT=$(psql "$DATABASE_URL" -t -c 'SELECT count(*) FROM "Player"' | tr -d ' ')
+          echo "Player count after re-run: $COUNT"
+          [ "$COUNT" -eq 8 ] || (echo "Seed not idempotent: expected 8 players, got $COUNT" && exit 1)
+
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
