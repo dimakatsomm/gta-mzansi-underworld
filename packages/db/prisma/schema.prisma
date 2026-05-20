@@ -336,6 +336,7 @@ model Reputation {
   familyId  String?
   gangId    String?
   area      String?
+  axis      String?  // scoring axis e.g. 'criminal', 'safety', 'corruption', 'integrity', 'stability'
   score     Float    @default(0)
   updatedAt DateTime @updatedAt
 
@@ -344,6 +345,7 @@ model Reputation {
   @@index([familyId])
   @@index([gangId])
   @@index([area])
+  @@index([axis])
 }
 
 // ============ Event sourcing / AI usage ============

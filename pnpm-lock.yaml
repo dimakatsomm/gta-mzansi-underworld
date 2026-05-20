@@ -146,6 +146,9 @@ importers:
 
   apps/event-worker:
     dependencies:
+      '@gtarp/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@gtarp/event-bus':
         specifier: workspace:*
         version: link:../../packages/event-bus

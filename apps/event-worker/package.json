@@ -13,6 +13,7 @@
     "clean": "rimraf dist .turbo"
   },
   "dependencies": {
+    "@gtarp/db": "workspace:*",
     "@gtarp/event-bus": "workspace:*",
     "@gtarp/event-schema": "workspace:*",
     "bullmq": "^5.56.0",

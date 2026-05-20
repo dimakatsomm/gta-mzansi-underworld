@@ -4,6 +4,7 @@ import Fastify from 'fastify';
 import { healthzPlugin } from './healthz.js';
 import { startBridge } from './bridge/index.js';
 import { registry } from './metrics.js';
+import { registerReputationEngine } from './engines/reputation/index.js';
 
 function parsePort(raw: string | undefined, fallback: number, name: string): number {
   if (raw === undefined || raw === '') return fallback;
@@ -32,6 +33,11 @@ const REDIS_URL = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
 const PORT = parsePort(process.env['EVENT_WORKER_PORT'], 3003, 'EVENT_WORKER_PORT');
 
 async function main() {
+  // ── Engine registration ───────────────────────────────────────────────────
+  // Engines must be registered before startBridge() so Workers pick up
+  // handlers on their first job.
+  registerReputationEngine();
+
   // ── Redis ─────────────────────────────────────────────────────────────────
   // JetStream stream lifecycle (create + config) is owned by @gtarp/event-bus
   // and runs inside startBridge() below. Keeping stream creation in one place
