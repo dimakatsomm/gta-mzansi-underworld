@@ -353,6 +353,7 @@ model EventLog {
   actor         String?
   correlationId String?
   payload       Json
+  published     Boolean  @default(false)
 
   @@index([type])
   @@index([occurredAt])

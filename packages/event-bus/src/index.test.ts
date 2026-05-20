@@ -39,9 +39,8 @@ describe('@gtarp/event-bus contract tests', () => {
 
     await bus.subscribe(
       'gtarp.crime.committed',
-      async (evt, msg) => {
+      async (evt) => {
         received.push(evt);
-        msg.ack();
       },
       { durableName: `test-round-trip-${Date.now()}` },
     );

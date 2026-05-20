@@ -14,7 +14,7 @@ import {
   type StreamConfig,
   type ConsumerConfig,
 } from 'nats';
-import { DomainEvent } from '@gtarp/event-schema';
+import { DomainEvent, SUBJECT_PREFIX, subjectFor } from '@gtarp/event-schema';
 import type { ZodError } from 'zod';
 
 export class EventValidationError extends Error {
@@ -27,6 +27,12 @@ export class EventValidationError extends Error {
 export interface SubscribeOpts {
   durableName?: string;
   deliverPolicy?: 'all' | 'new' | 'last';
+  /**
+   * When true (default), `msg.ack()` is called automatically after the handler
+   * resolves. Set to false to take manual control of acks/naks — required if
+   * the handler may want to nak/term/redeliver explicitly.
+   */
+  autoAck?: boolean;
 }
 
 /** Opaque handle returned by subscribe — call close() to stop consuming. */
@@ -36,6 +42,13 @@ export interface Subscription {
 
 export interface EventBus {
   publish(event: DomainEvent): Promise<{ seq: number }>;
+  /**
+   * Subscribe to a JetStream subject pattern (e.g. `gtarp.crime.*`).
+   *
+   * Ack policy is explicit. By default the bus auto-acks after the handler
+   * resolves successfully and lets JetStream redeliver on thrown errors
+   * (`autoAck: false` to take manual control).
+   */
   subscribe(
     subjectPattern: string,
     handler: (evt: DomainEvent, msg: JsMsg) => Promise<void>,
@@ -45,8 +58,8 @@ export interface EventBus {
   close(): Promise<void>;
 }
 
-const STREAM_NAME = 'gtarp';
-const STREAM_SUBJECTS = ['gtarp.>'];
+const STREAM_NAME = SUBJECT_PREFIX;
+const STREAM_SUBJECTS = [`${SUBJECT_PREFIX}.>`];
 const sc = StringCodec();
 
 export async function connect(opts?: { servers?: string | string[] }): Promise<EventBus> {
@@ -64,7 +77,7 @@ export async function connect(opts?: { servers?: string | string[] }): Promise<E
       if (!parsed.success) {
         throw new EventValidationError(parsed.error);
       }
-      const subject = `gtarp.${parsed.data.type}`;
+      const subject = subjectFor(parsed.data.type);
       const pubAck = await js.publish(subject, sc.encode(JSON.stringify(parsed.data)), {
         msgID: parsed.data.id,
       });
@@ -78,6 +91,7 @@ export async function connect(opts?: { servers?: string | string[] }): Promise<E
     ): Promise<Subscription> {
       const durableName =
         subscribeOpts?.durableName ?? subjectPattern.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const autoAck = subscribeOpts?.autoAck ?? true;
 
       const deliverPolicyMap: Record<NonNullable<SubscribeOpts['deliverPolicy']>, DeliverPolicy> = {
         all: DeliverPolicy.All,
@@ -100,14 +114,15 @@ export async function connect(opts?: { servers?: string | string[] }): Promise<E
       try {
         await jsm.consumers.info(STREAM_NAME, durableName);
         await jsm.consumers.update(STREAM_NAME, durableName, consumerConfig);
-      } catch {
+      } catch (err) {
+        if (!_isNotFound(err)) throw err;
         await jsm.consumers.add(STREAM_NAME, consumerConfig);
       }
 
       const consumer = await js.consumers.get(STREAM_NAME, durableName);
       const msgs = await consumer.consume();
 
-      void (async () => {
+      const loop = (async () => {
         for await (const msg of msgs) {
           try {
             const raw: unknown = JSON.parse(sc.decode(msg.data));
@@ -123,12 +138,16 @@ export async function connect(opts?: { servers?: string | string[] }): Promise<E
               continue;
             }
             await handler(parsed.data, msg as unknown as JsMsg);
+            if (autoAck) msg.ack();
           } catch (err) {
             // Handler error — do not ack, allow redelivery up to maxDeliver
             console.error('[event-bus] handler error', err);
           }
         }
       })();
+      loop.catch((err) => {
+        console.error('[event-bus] consume loop error', err);
+      });
 
       return { close: () => msgs.close() };
     },
@@ -145,22 +164,31 @@ export async function connect(opts?: { servers?: string | string[] }): Promise<E
   return bus;
 }
 
+function _isNotFound(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false;
+  const e = err as { code?: string; message?: string; api_error?: { code?: number } };
+  if (e.api_error?.code === 404) return true;
+  if (e.code === '404') return true;
+  return typeof e.message === 'string' && /not\s*found|does not exist/i.test(e.message);
+}
+
 async function _ensureStream(
   jsm: JetStreamManager,
   name: string,
   subjects: string[],
 ): Promise<void> {
-  const streamConfig: Partial<StreamConfig> = {
+  const streamConfig: StreamConfig = {
     name,
     subjects,
     retention: RetentionPolicy.Limits,
     storage: StorageType.File,
     max_age: nanos(30 * 24 * 60 * 60 * 1_000), // 30 days in nanoseconds
-  };
+  } as StreamConfig;
   try {
     await jsm.streams.info(name);
     await jsm.streams.update(name, streamConfig);
-  } catch {
+  } catch (err) {
+    if (!_isNotFound(err)) throw err;
     await jsm.streams.add(streamConfig);
   }
 }
