@@ -30,6 +30,8 @@ model Player {
   arrests         Arrest[]   @relation("Suspect")
   arrestsByOfficer Arrest[]  @relation("Officer")
   reputation      Reputation[]
+  warrants        Warrant[]
+  criminalRecord  CriminalRecord?
   ownedBusinesses Business[] @relation("BusinessOwner")
   ownedProperties Property[] @relation("PropertyOwner")
   ownedVehicles   Vehicle[]  @relation("VehicleOwner")
@@ -62,9 +64,10 @@ model Family {
   motto      String?
   reputation Float    @default(0)
 
-  members    FamilyMember[]
-  households Household[]
-  businesses Business[]
+  members     FamilyMember[]
+  households  Household[]
+  businesses  Business[]
+  reputations Reputation[]
 }
 
 model FamilyMember {
@@ -213,6 +216,9 @@ model Warrant {
   status    String   @default("open") // open, served, quashed
 
   crime     Crime    @relation(fields: [crimeId], references: [id])
+  subject   Player   @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  @@index([subjectId])
+  @@index([crimeId])
 }
 
 model Arrest {
@@ -236,6 +242,8 @@ model CriminalRecord {
   totalConvictions Int @default(0)
   notorietyScore Float @default(0)
   updatedAt DateTime @updatedAt
+
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
 }
 
 model Bribe {
@@ -259,10 +267,11 @@ model Gang {
   colors     String?
   reputation Float    @default(0)
 
-  members    GangMembership[]
+  members     GangMembership[]
   territories Territory[]    @relation("ControllingGang")
-  alliancesA Alliance[]      @relation("GangA")
-  alliancesB Alliance[]      @relation("GangB")
+  alliancesA  Alliance[]      @relation("GangA")
+  alliancesB  Alliance[]      @relation("GangB")
+  reputations Reputation[]
 }
 
 model GangMembership {
@@ -340,6 +349,8 @@ model Reputation {
   updatedAt DateTime @updatedAt
 
   player    Player?  @relation(fields: [playerId], references: [id])
+  family    Family?  @relation(fields: [familyId], references: [id], onDelete: SetNull)
+  gang      Gang?    @relation(fields: [gangId], references: [id], onDelete: SetNull)
   @@index([playerId])
   @@index([familyId])
   @@index([gangId])
