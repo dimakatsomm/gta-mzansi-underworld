@@ -1,8 +1,9 @@
 import 'dotenv/config';
-import { connect, RetentionPolicy, StorageType } from 'nats';
 import { Redis } from 'ioredis';
 import Fastify from 'fastify';
 import { healthzPlugin } from './healthz.js';
+import { startBridge } from './bridge/index.js';
+import { registry } from './metrics.js';
 
 function parsePort(raw: string | undefined, fallback: number, name: string): number {
   if (raw === undefined || raw === '') return fallback;
@@ -28,56 +29,37 @@ function redactUrl(rawUrl: string): string {
 
 const NATS_URL = process.env['NATS_URL'] ?? 'nats://localhost:4222';
 const REDIS_URL = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
-const NATS_STREAM = process.env['NATS_STREAM'] ?? 'gtarp';
 const PORT = parsePort(process.env['EVENT_WORKER_PORT'], 3003, 'EVENT_WORKER_PORT');
 
-// 7 days expressed in nanoseconds (NATS JetStream max_age unit).
-const SEVEN_DAYS_NS = 7 * 24 * 60 * 60 * 1_000_000_000;
-
 async function main() {
-  // ── NATS ─────────────────────────────────────────────────────────────────
-  const nc = await connect({ servers: NATS_URL });
-  console.log(`[event-worker] Connected to NATS: ${redactUrl(NATS_URL)}`);
-
-  const jsm = await nc.jetstreamManager();
-
-  // Create the gtarp JetStream stream if it does not yet exist.
-  // Only fall through to `streams.add` when the stream is genuinely missing —
-  // auth/network failures need to surface, not be swallowed.
-  try {
-    await jsm.streams.info(NATS_STREAM);
-    console.log(`[event-worker] JetStream stream "${NATS_STREAM}" exists`);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    const isNotFound = /\b404\b|\bnot\s*found\b/i.test(message);
-    if (!isNotFound) {
-      throw err;
-    }
-    await jsm.streams.add({
-      name: NATS_STREAM,
-      subjects: [`${NATS_STREAM}.>`],
-      retention: RetentionPolicy.Limits,
-      storage: StorageType.File,
-      max_age: SEVEN_DAYS_NS,
-    });
-    console.log(`[event-worker] Created JetStream stream "${NATS_STREAM}"`);
-  }
-
   // ── Redis ─────────────────────────────────────────────────────────────────
+  // JetStream stream lifecycle (create + config) is owned by @gtarp/event-bus
+  // and runs inside startBridge() below. Keeping stream creation in one place
+  // avoids the worker and the bus disagreeing on retention / subject filters.
   const redis = new Redis(REDIS_URL);
   redis.on('connect', () =>
     console.log(`[event-worker] Connected to Redis: ${redactUrl(REDIS_URL)}`),
   );
   redis.on('error', (err: Error) => console.error('[event-worker] Redis error:', err));
 
+  // ── BullMQ bridge ─────────────────────────────────────────────────────────
+  const bridge = await startBridge({ natsUrl: NATS_URL, redisUrl: REDIS_URL });
+  console.log(`[event-worker] BullMQ bridge started — NATS: ${redactUrl(NATS_URL)}`);
+
   // ── Heartbeat ─────────────────────────────────────────────────────────────
   const heartbeat = setInterval(() => {
     console.log(`[event-worker] heartbeat ${new Date().toISOString()}`);
   }, 30_000);
 
-  // ── HTTP /healthz ─────────────────────────────────────────────────────────
+  // ── HTTP /healthz + /metrics ──────────────────────────────────────────────
   const app = Fastify({ logger: false });
   await app.register(healthzPlugin);
+  app.get('/metrics', async (_req, reply) => {
+    const text = await registry.metrics();
+    // prom-client computes the correct content-type (may include charset and
+    // can switch to application/openmetrics-text when OpenMetrics is enabled).
+    return reply.type(registry.contentType).send(text);
+  });
   await app.listen({ port: PORT, host: '0.0.0.0' });
   console.log(`[event-worker] /healthz listening on port ${PORT}`);
 
@@ -89,8 +71,8 @@ async function main() {
     console.log(`[event-worker] ${signal} received — shutting down`);
     clearInterval(heartbeat);
     await app.close();
+    await bridge.close();
     redis.disconnect();
-    await nc.drain();
     process.exit(0);
   };
 
