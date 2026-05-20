@@ -96,7 +96,9 @@ export async function startBridge(opts: { natsUrl?: string; redisUrl?: string })
           if (queue) {
             // jobId provides BullMQ-level dedup as a secondary safeguard.
             await queue.add(evt.type, evt, {
-              jobId: `${consumer.name}:${evt.id}`,
+              // BullMQ disallows `:` in custom job IDs (reserved as Redis key
+              // separator) — use `-` between consumer name and event id.
+              jobId: `${consumer.name}-${evt.id}`,
             });
             jobsEnqueuedTotal.inc({ queue: consumer.name });
           }

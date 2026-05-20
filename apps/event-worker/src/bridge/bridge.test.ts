@@ -87,7 +87,7 @@ describe('bridge idempotency', () => {
     async function enqueueIfNew(evt: DomainEvent): Promise<void> {
       const isNew = await dedupRedis.set(`event:${evt.id}`, '1', 'EX', 86400, 'NX');
       if (!isNew) return;
-      await queue.add(evt.type, evt, { jobId: `${queueName}:${evt.id}` });
+      await queue.add(evt.type, evt, { jobId: `${queueName}-${evt.id}` });
     }
 
     // Submit the same event twice — only the first should result in a job.
