@@ -11,6 +11,12 @@ interface EventsPluginOptions extends FastifyPluginOptions {
 export async function eventsRoute(app: FastifyInstance, opts: EventsPluginOptions): Promise<void> {
   const { prisma, eventBus } = opts;
 
+  function sourceIdKey(req: FastifyRequest): string {
+    const raw = req.headers['x-source-id'];
+    const first = Array.isArray(raw) ? raw[0] : raw;
+    return first ?? req.ip ?? 'unknown';
+  }
+
   app.post(
     '/events',
     {
@@ -18,8 +24,7 @@ export async function eventsRoute(app: FastifyInstance, opts: EventsPluginOption
         rateLimit: {
           max: 50,
           timeWindow: 1000,
-          keyGenerator: (req: FastifyRequest) =>
-            (req.headers['x-source-id'] as string | undefined) ?? req.ip ?? 'unknown',
+          keyGenerator: sourceIdKey,
         },
       },
     },
@@ -36,19 +41,29 @@ export async function eventsRoute(app: FastifyInstance, opts: EventsPluginOption
 
       const event = parsed.data;
 
-      const log = await prisma.eventLog.create({
-        data: {
-          id: event.id,
-          type: event.type,
-          version: event.version,
-          occurredAt: new Date(event.occurredAt),
-          actor: event.actor ?? null,
-          correlationId: event.correlationId ?? null,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          payload: event.data as any,
-          published: false,
-        },
-      });
+      // Idempotent ingest: if a row with this id already exists and was published,
+      // return success without re-publishing. JetStream's per-msgID dedup would
+      // also block duplicates, but short-circuiting here saves a NATS round-trip.
+      const existing = await prisma.eventLog.findUnique({ where: { id: event.id } });
+      if (existing?.published) {
+        return reply.status(200).send({ id: existing.id, duplicate: true });
+      }
+
+      const log =
+        existing ??
+        (await prisma.eventLog.create({
+          data: {
+            id: event.id,
+            type: event.type,
+            version: event.version,
+            occurredAt: new Date(event.occurredAt),
+            actor: event.actor ?? null,
+            correlationId: event.correlationId ?? null,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            payload: event.data as any,
+            published: false,
+          },
+        }));
 
       let seq: number;
       try {
@@ -59,10 +74,16 @@ export async function eventsRoute(app: FastifyInstance, opts: EventsPluginOption
         return reply.status(500).send({ error: 'Event bus failure' });
       }
 
-      await prisma.eventLog.update({
-        where: { id: log.id },
-        data: { published: true },
-      });
+      try {
+        await prisma.eventLog.update({
+          where: { id: log.id },
+          data: { published: true },
+        });
+      } catch (err) {
+        // JetStream already accepted the event; the row will be reconciled on the
+        // next ingest attempt (existing.published === false → retry publish).
+        app.log.warn({ err, eventId: log.id }, 'Failed to mark EventLog.published');
+      }
 
       return reply.status(201).send({ id: log.id, seq });
     },

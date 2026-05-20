@@ -177,13 +177,16 @@ async function _ensureStream(
   name: string,
   subjects: string[],
 ): Promise<void> {
-  const streamConfig: StreamConfig = {
+  // Partial<StreamConfig>: jsm.streams.add/update accept partial configs and fill
+  // server-side defaults for unspecified fields. Casting to the full StreamConfig
+  // would hide missing-field errors if the nats typings ever tighten.
+  const streamConfig: Partial<StreamConfig> = {
     name,
     subjects,
     retention: RetentionPolicy.Limits,
     storage: StorageType.File,
     max_age: nanos(30 * 24 * 60 * 60 * 1_000), // 30 days in nanoseconds
-  } as StreamConfig;
+  };
   try {
     await jsm.streams.info(name);
     await jsm.streams.update(name, streamConfig);

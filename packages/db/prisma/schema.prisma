@@ -1,5 +1,9 @@
 // Prisma schema for GTA RP. Source of truth for persistent state.
-// Event log is append-only; do not mutate rows in `EventLog`.
+// EventLog row content (id, type, payload, occurredAt, actor, correlationId)
+// is append-only — do not mutate the recorded event. The `published` flag is
+// the single exception: it is a publish-receipt bit flipped false→true exactly
+// once after the ingest path emits to JetStream, and is used to retry publish
+// on the next ingest attempt for the same event id.
 
 generator client {
   provider = "prisma-client-js"
