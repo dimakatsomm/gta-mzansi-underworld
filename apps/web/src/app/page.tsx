@@ -1,3 +1,5 @@
+import { CULTURAL_TERMS, PLACES } from '@gtarp/sa-content';
+
 /**
  * Landing page — hero block + Discord invite placeholder.
  *
@@ -10,30 +12,28 @@ export default function HomePage() {
       {/* Hero */}
       <section className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
         <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-amber-400">
-          eGoli never sleeps
+          {PLACES.EGOLI} never sleeps
         </p>
 
         <h1 className="mb-6 text-5xl font-black leading-tight tracking-tight md:text-7xl">
-          Mzansi
+          {PLACES.MZANSI}
           <br />
           <span className="text-amber-400">Underworld</span>
         </h1>
 
         <p className="mb-10 max-w-xl text-lg text-zinc-400">
-          The first AI-powered South African criminal society simulator. Powered by FiveM + QBox.
-          Amapiano in the background, iron in the boot.
+          The first AI-powered South African criminal society simulator. Powered by FiveM + QBox.{' '}
+          {CULTURAL_TERMS.AMAPIANO} in the background, iron in the boot.
         </p>
 
-        <a
-          href="#"
-          role="button"
-          aria-disabled="true"
-          tabIndex={-1}
-          className="pointer-events-none rounded-lg bg-indigo-600/60 px-8 py-3 font-semibold text-white/70"
+        <button
+          type="button"
+          disabled
+          className="cursor-not-allowed rounded-lg bg-indigo-600/60 px-8 py-3 font-semibold text-white/70"
           aria-label="Join our Discord server (coming soon)"
         >
           Join Discord
-        </a>
+        </button>
 
         <p className="mt-6 text-xs text-zinc-600">Discord invite · coming soon</p>
       </section>

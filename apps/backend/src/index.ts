@@ -1,7 +1,8 @@
 import 'dotenv/config';
 import { buildServer } from './server.js';
+import { parsePort } from './parsePort.js';
 
-const port = Number(process.env['BACKEND_PORT'] ?? 3001);
+const port = parsePort(process.env['BACKEND_PORT'], 3001, 'BACKEND_PORT');
 const app = await buildServer();
 
 app.listen({ port, host: '0.0.0.0' }, (err) => {

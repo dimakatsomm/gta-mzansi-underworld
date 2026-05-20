@@ -1,10 +1,19 @@
-import { describe, it, expect } from 'vitest';
-import Fastify from 'fastify';
+import { afterEach, describe, expect, it } from 'vitest';
+import Fastify, { type FastifyInstance } from 'fastify';
 import { healthzPlugin } from './healthz.js';
 
 describe('event-worker /healthz', () => {
+  let app: FastifyInstance | undefined;
+
+  afterEach(async () => {
+    if (app) {
+      await app.close();
+      app = undefined;
+    }
+  });
+
   it('returns 200 with status ok and a time string', async () => {
-    const app = Fastify({ logger: false });
+    app = Fastify({ logger: false });
     await app.register(healthzPlugin);
 
     const res = await app.inject({ method: 'GET', url: '/healthz' });
