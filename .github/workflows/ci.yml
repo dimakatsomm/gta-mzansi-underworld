@@ -43,7 +43,6 @@ jobs:
 
       nats:
         image: nats:2.10-alpine
-        command: ['-js']
         ports:
           - 4222:4222
 
