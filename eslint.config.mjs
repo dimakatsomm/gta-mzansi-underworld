@@ -32,7 +32,7 @@ export default [
     },
   },
   {
-    ignores: ['**/dist/**', '**/.next/**', '**/.turbo/**', '**/node_modules/**', '**/coverage/**'],
+    ignores: ['**/dist/**', '**/.next/**', '**/.turbo/**', '**/node_modules/**', '**/coverage/**', '**/next-env.d.ts'],
   },
   prettier,
 ];
