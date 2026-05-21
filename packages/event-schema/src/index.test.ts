@@ -39,10 +39,13 @@ describe('event-schema', () => {
 });
 
 describe('WitnessStatement schema', () => {
-  const VALID: Parameters<typeof WitnessStatement.parse>[0] = {
+  // Annotate with the Zod input type so TypeScript knows the shape and spread
+  // operations compile. Parameters<parse>[0] resolves to `unknown` (Zod parses
+  // any input) which breaks spread — use z.input<> or an explicit object literal.
+  const VALID = {
     id: '00000000-0000-4000-8000-000000000010',
-    type: 'witness.statement',
-    version: 1,
+    type: 'witness.statement' as const,
+    version: 1 as const,
     occurredAt: '2026-05-21T12:00:00.000Z',
     data: {
       crimeId: '00000000-0000-4000-8000-000000000011',
@@ -79,9 +82,7 @@ describe('WitnessStatement schema', () => {
 
   it('rejects missing witnessId', () => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { witnessId: _id, ...dataWithout } = VALID.data as typeof VALID.data & {
-      witnessId: string;
-    };
+    const { witnessId: _id, ...dataWithout } = VALID.data;
     expect(() => WitnessStatement.parse({ ...VALID, data: dataWithout })).toThrow();
   });
 });
