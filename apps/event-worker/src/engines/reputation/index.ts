@@ -85,6 +85,7 @@ export const reputationConsumer: ConsumerRegistration = {
     'gtarp.bribe.accepted',
     'gtarp.territory.lost',
     'gtarp.business.robbed',
+    'gtarp.phara.activity',
   ],
   handler: async (job: Job<DomainEvent>) => {
     await applyReputationDeltas(getPrisma(), job.data);

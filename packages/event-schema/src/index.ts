@@ -166,6 +166,21 @@ export const WitnessStatement = EventEnvelope.extend({
   }),
 });
 
+export const PharaActivityType = z.enum(['mugging', 'overdose', 'harassment', 'dealing_proximity']);
+
+export const PharaActivity = EventEnvelope.extend({
+  type: z.literal('phara.activity'),
+  version: z.literal(1),
+  data: z.object({
+    activityId: z.string().uuid(),
+    activityType: PharaActivityType,
+    /** NPC net ID string — not a persistent entity. */
+    pharaRef: z.string(),
+    location: Geo,
+    victimId: z.string().optional(),
+  }),
+});
+
 export const DomainEvent = z.discriminatedUnion('type', [
   CrimeCommitted,
   ArrestMade,
@@ -177,6 +192,7 @@ export const DomainEvent = z.discriminatedUnion('type', [
   DispatchRequested,
   WitnessObserved,
   WitnessStatement,
+  PharaActivity,
 ]);
 
 export type DomainEvent = z.infer<typeof DomainEvent>;
@@ -190,6 +206,8 @@ export type ChildBorn = z.infer<typeof ChildBorn>;
 export type DispatchRequested = z.infer<typeof DispatchRequested>;
 export type WitnessObserved = z.infer<typeof WitnessObserved>;
 export type WitnessStatement = z.infer<typeof WitnessStatement>;
+export type PharaActivity = z.infer<typeof PharaActivity>;
+export type PharaActivityType = z.infer<typeof PharaActivityType>;
 
 export const SUBJECT_PREFIX = 'gtarp';
 export const subjectFor = (type: DomainEvent['type']): string => `${SUBJECT_PREFIX}.${type}`;

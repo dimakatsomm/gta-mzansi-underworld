@@ -60,6 +60,29 @@ export function scoreEvent(event: DomainEvent): ReputationDelta[] {
       // lookup — handled in engine.
       return [{ businessId: event.data.businessId, axis: 'stability', delta: -10 }];
 
+    case 'phara.activity': {
+      const { activityType, location } = event.data;
+      const area = location.area;
+      switch (activityType) {
+        case 'mugging':
+          return [
+            { area, axis: 'safety', delta: -4 },
+            { area, axis: 'criminal', delta: 2 },
+          ];
+        case 'overdose':
+          return [
+            { area, axis: 'safety', delta: -3 },
+            { area, axis: 'stability', delta: -2 },
+          ];
+        case 'harassment':
+          return [{ area, axis: 'safety', delta: -1 }];
+        case 'dealing_proximity':
+          return [{ area, axis: 'criminal', delta: 1 }];
+        default:
+          return [];
+      }
+    }
+
     default:
       return [];
   }

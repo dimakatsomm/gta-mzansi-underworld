@@ -88,6 +88,22 @@ export const SLANG: Array<{
   { term: 'mfowethu', meaning: 'my brother', register: 'street' },
   { term: 'jol', meaning: 'party / fun', register: 'casual' },
   { term: 'kasi', meaning: 'township', register: 'casual' },
+  // Drug-related — used in phara dialogue. Source: lore-bible §4 (substance culture).
+  {
+    term: 'nyaope',
+    meaning: 'street drug (heroin + cannabis mix), also called whoonga',
+    register: 'street',
+  },
+  {
+    term: 'whoonga',
+    meaning: 'street drug (heroin + cannabis mix), also called nyaope',
+    register: 'street',
+  },
+  {
+    term: 'phara',
+    meaning: 'person addicted to nyaope/whoonga; homeless addict',
+    register: 'street',
+  },
 ];
 
 // Surnames — common across SA. No single ethnic group over-represented.
@@ -221,3 +237,31 @@ export const DISPATCH_TEMPLATES: Record<string, string> = {
  * Value is the ElevenLabs voice ID string; set ELEVENLABS_DISPATCH_VOICE_ID env to override.
  */
 export const DISPATCH_VOICE_ID = 'ErXwobaYiN019PkySvjV' as const;
+
+/**
+ * Dialogue lines for phara (nyaope/whoonga addict) ambient NPCs.
+ * Three registers: begging, aggressive (mugging), and incoherent (overdose/high).
+ * Source: lore-bible §4 (substance culture); tone ref: Gomora, Yizo Yizo.
+ */
+export const PHARA_DIALOGUE: Record<'begging' | 'aggressive' | 'incoherent', readonly string[]> = {
+  begging: [
+    'Aweh, bra... just a few rand, ne? Please, my china.',
+    "Eish, I haven't eaten since yesterday. Spare something, mfowethu?",
+    'Boss, boss — just two rand for transport, I swear on my mother.',
+    'Sisi, please... one cigarette, anything. Please.',
+    'Sharp sharp — help a ou out, ne?',
+  ],
+  aggressive: [
+    'Voetsek! Give me your phone, NOW.',
+    'Empty your pockets, skebenga, before I lose it.',
+    "You think I'm scared? I've got nothing to lose. Give it up.",
+    "Sharp sharp, let's do this nice and easy. Give me the wallet.",
+  ],
+  incoherent: [
+    'The... the skollie said... eish... where is he now...',
+    "Haai haai haai... it's too much, too much today...",
+    'Sharp... lekker... the kasi is burning, bra...',
+    "Voetsek voetsek... they're watching...",
+    "Mfowethu... I can't... eish...",
+  ],
+} as const;
