@@ -13,6 +13,8 @@
     "clean": "rimraf dist .turbo"
   },
   "dependencies": {
+    "@gtarp/event-bus": "workspace:*",
+    "@gtarp/event-schema": "workspace:*",
     "discord.js": "^14.16.3",
     "dotenv": "^16.4.5"
   },

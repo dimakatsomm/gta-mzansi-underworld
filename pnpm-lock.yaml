@@ -136,6 +136,12 @@ importers:
 
   apps/discord-bot:
     dependencies:
+      '@gtarp/event-bus':
+        specifier: workspace:*
+        version: link:../../packages/event-bus
+      '@gtarp/event-schema':
+        specifier: workspace:*
+        version: link:../../packages/event-schema
       discord.js:
         specifier: ^14.16.3
         version: 14.26.4
@@ -4034,6 +4040,14 @@ snapshots:
     optionalDependencies:
       vite: 5.4.21(@types/node@20.19.41)
 
+  '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@22.19.19))':
+    dependencies:
+      '@vitest/spy': 2.1.9
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 5.4.21(@types/node@22.19.19)
+
   '@vitest/pretty-format@2.1.9':
     dependencies:
       tinyrainbow: 1.2.0
@@ -5709,7 +5723,7 @@ snapshots:
   vitest@2.1.9(@types/node@22.19.19):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@20.19.41))
+      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@22.19.19))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9
