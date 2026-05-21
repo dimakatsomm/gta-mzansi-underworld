@@ -17,8 +17,8 @@ export function severityToTone(severity: CrimeCommitted['data']['severity']): Di
 
 /**
  * Maps (crimeType, severity) to the dispatch template IDs from sa-content.
- * Keys: `<crimeType>` or `<crimeType>:<severity>` (more specific wins).
- * Fall back to 'robbery' templates when no match.
+ * Keys: `<crimeType>:<severity>` (more specific wins) or `<crimeType>` (any severity).
+ * Lookup order: `<crimeType>:<severity>` → `<crimeType>` → null (Tier 1 escalation).
  */
 const TEMPLATE_POOL: Record<string, readonly string[]> = {
   hijack: ['001', '007'],
@@ -36,8 +36,6 @@ const TEMPLATE_POOL: Record<string, readonly string[]> = {
   money_laundering: ['006'],
   // No template → caller must escalate to Tier 1
 };
-
-const FALLBACK_POOL: readonly string[] = ['002', '004'];
 
 /** Templates ship inlined inside `@gtarp/sa-content` — no fs reads at runtime. */
 function loadTemplates(): Record<string, string> {
@@ -69,14 +67,18 @@ function pickFrom<T>(arr: readonly T[], rng: () => number): T {
 
 /**
  * Returns the Tier 0 dispatch summary for the given crime event.
- * Returns `null` when no template is available for the severity bucket (Tier 1 fallback needed).
+ * Returns `null` when no template pool exists for the (crimeType, severity)
+ * combination (Tier 1 fallback needed).
+ *
+ * Lookup order: `<crimeType>:<severity>` → `<crimeType>` → null.
  *
  * Deterministic: same crimeId always produces the same text.
  */
 export function buildTier0Summary(event: CrimeCommitted): string | null {
   const templates = loadTemplates();
-  const crimeType = event.data.crimeType;
-  const pool = TEMPLATE_POOL[crimeType] ?? FALLBACK_POOL;
+  const { crimeType, severity } = event.data;
+  const pool = TEMPLATE_POOL[`${crimeType}:${severity}`] ?? TEMPLATE_POOL[crimeType];
+  if (!pool) return null;
 
   const rng = mulberry32(strToSeed(event.data.crimeId));
   const templateId = pickFrom(pool, rng);
