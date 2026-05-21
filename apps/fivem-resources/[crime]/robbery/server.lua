@@ -2,8 +2,8 @@
 -- Server-side: validates holdup request, publishes crime.committed via backend /events.
 -- No direct DB writes here — all persistence is event-driven through backend.
 
--- luacheck: globals exports TriggerClientEvent source GetPlayerPed GetEntityCoords
--- luacheck: globals GetConvar math table string os
+-- luacheck: globals exports TriggerClientEvent RegisterNetEvent source GetPlayerPed GetEntityCoords GetGameTimer PerformHttpRequest vector3
+-- luacheck: globals GetConvar GetCurrentResourceName json math table string os
 
 local BACKEND_URL      = GetConvar('BACKEND_URL', 'http://localhost:3001')
 local INGEST_TOKEN     = GetConvar('FIVEM_INGEST_TOKEN', '')
@@ -12,9 +12,17 @@ local INGEST_TOKEN     = GetConvar('FIVEM_INGEST_TOKEN', '')
 local HOLDUP_COOLDOWN_MS = 30000
 local playerCooldowns    = {}
 
---- Generate a UUID v4-ish string (no crypto lib in Lua runtime, use math.random seeded by os.time)
+-- Seed math.random ONCE at resource load. Re-seeding per-call with os.time()
+-- caused identical IDs for back-to-back generations within the same second
+-- (and inside event handlers `source` here is the caller's id, which is the
+-- same for crimeId+eventId produced on the same player tick). Mixing
+-- GetGameTimer() in gives sub-second entropy on resource start.
+math.randomseed(os.time() + GetGameTimer())
+-- Burn a few values to move past correlated initial outputs.
+for _ = 1, 8 do math.random() end
+
+--- Generate a UUID v4 string. Relies on math.random being seeded once at load.
 local function uuid4()
-  math.randomseed(os.time() + source * 1000)
   return string.format(
     '%08x-%04x-4%03x-%04x-%012x',
     math.random(0, 0xFFFFFFFF),
@@ -23,6 +31,11 @@ local function uuid4()
     math.random(0x8000, 0xBFFF),
     math.random(0, 0xFFFFFFFF)
   )
+end
+
+--- True when v is a finite Lua number (rejects nil, NaN, +/-inf, strings).
+local function isFiniteNumber(v)
+  return type(v) == 'number' and v == v and v ~= math.huge and v ~= -math.huge
 end
 
 --- Check and set player cooldown. Returns true if allowed.
@@ -107,6 +120,13 @@ RegisterNetEvent('robbery:requestHoldup', function(data)
   -- Basic validation
   if type(data) ~= 'table' then return end
   if type(data.area) ~= 'string' then return end
+
+  -- Coordinate validation BEFORE constructing vector3() so malformed payloads
+  -- (nil/strings/NaN) can't throw or bypass the anti-cheat distance check.
+  if not (isFiniteNumber(data.x) and isFiniteNumber(data.y) and isFiniteNumber(data.z)) then
+    print(('[robbery] rejected player %d — non-numeric coords'):format(playerId))
+    return
+  end
 
   -- Cooldown guard
   if not checkCooldown(playerId) then

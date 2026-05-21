@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Redis } from 'ioredis';
 import type { DomainEvent, CrimeCommitted } from '@gtarp/event-schema';
 import type { Job } from 'bullmq';
-import { connect as connectBus } from '@gtarp/event-bus';
+import type { EventBus } from '@gtarp/event-bus';
 import { DISPATCH_VOICE_ID } from '@gtarp/sa-content';
 import { registerConsumer, type ConsumerRegistration } from '../../bridge/registry.js';
 import { generateDispatchSummary, dispatchCacheKey } from './summary.js';
@@ -22,7 +22,8 @@ function incidentKey(crimeId: string): string {
 interface DispatchEngineDeps {
   redis: Redis;
   orchestratorUrl: string;
-  natsUrl: string;
+  /** Long-lived EventBus — connect once at startup, reuse across all crimes. */
+  bus: EventBus;
 }
 
 let _deps: DispatchEngineDeps | undefined;
@@ -31,20 +32,38 @@ export function initDispatchEngine(deps: DispatchEngineDeps): void {
   _deps = deps;
 }
 
+/** Reset internal state — tests only. */
+export function _resetDispatchEngineForTests(): void {
+  _deps = undefined;
+}
+
+/** TTL (seconds) for the atomic dispatch claim. Matches summary cache. */
+const INCIDENT_CLAIM_TTL_SEC = 60 * 60 * 24;
+
 async function handleCrimeCommitted(event: CrimeCommitted): Promise<void> {
   if (!_deps) {
     console.warn('[dispatch] engine not initialised — skipping');
     return;
   }
 
-  const { redis, orchestratorUrl, natsUrl } = _deps;
+  const { redis, orchestratorUrl, bus } = _deps;
   const { crimeId, severity, location } = event.data;
 
-  // Idempotency: if we already published a dispatch for this crimeId, skip.
-  const existingIncidentId = await redis.get(incidentKey(crimeId));
-  if (existingIncidentId) {
+  // Atomic idempotency claim: SET NX guarantees exactly one worker proceeds
+  // per crimeId even under concurrent delivery. Value is the new incidentId so
+  // subsequent racers can log what won.
+  const incidentId = randomUUID();
+  const claimed = await redis.set(
+    incidentKey(crimeId),
+    incidentId,
+    'EX',
+    INCIDENT_CLAIM_TTL_SEC,
+    'NX',
+  );
+  if (claimed !== 'OK') {
+    const existingIncidentId = await redis.get(incidentKey(crimeId));
     console.log(
-      `[dispatch] skipping crimeId=${crimeId} — already dispatched as ${existingIncidentId}`,
+      `[dispatch] skipping crimeId=${crimeId} — already dispatched as ${existingIncidentId ?? '<unknown>'}`,
     );
     return;
   }
@@ -72,9 +91,9 @@ async function handleCrimeCommitted(event: CrimeCommitted): Promise<void> {
     }
   }
 
-  // 3 — Publish dispatch.requested
-  const incidentId = randomUUID();
-  const bus = await connectBus({ servers: natsUrl });
+  // 3 — Publish dispatch.requested on the shared bus connection.
+  // Claim already written above; align its TTL with the summary cache if
+  // available so they expire together.
   try {
     await bus.publish({
       id: randomUUID(),
@@ -90,13 +109,16 @@ async function handleCrimeCommitted(event: CrimeCommitted): Promise<void> {
         ...(voiceUrl ? { voiceUrl } : {}),
       },
     });
-  } finally {
-    await bus.close();
+  } catch (err) {
+    // Publish failed — release the claim so a retry can succeed.
+    await redis.del(incidentKey(crimeId));
+    throw err;
   }
 
-  // 4 — Mark as dispatched (idempotency TTL = 24h matches summary cache)
   const summaryTtl = await redis.ttl(dispatchCacheKey(crimeId));
-  await redis.set(incidentKey(crimeId), incidentId, 'EX', summaryTtl > 0 ? summaryTtl : 86400);
+  if (summaryTtl > 0 && summaryTtl !== INCIDENT_CLAIM_TTL_SEC) {
+    await redis.expire(incidentKey(crimeId), summaryTtl);
+  }
 
   console.log(
     `[dispatch] published dispatch.requested incidentId=${incidentId} crimeId=${crimeId}`,

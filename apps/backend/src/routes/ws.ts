@@ -1,3 +1,4 @@
+import { hostname } from 'node:os';
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import type { WebSocket } from '@fastify/websocket';
 import type { EventBus } from '@gtarp/event-bus';
@@ -59,6 +60,21 @@ export async function wsRoute(app: FastifyInstance, opts: WsPluginOptions): Prom
         }
       }
     },
-    { durableName: 'fivem-ws-bridge', deliverPolicy: 'new' },
+    {
+      // Each backend instance needs its OWN copy of every dispatch event so it
+      // can fan out to its own connected FiveM clients. A shared durable name
+      // would load-balance messages between replicas instead. Include
+      // hostname+pid+random suffix so horizontally-scaled deployments each get
+      // a distinct consumer.
+      durableName: `fivem-ws-bridge-${sanitiseDurable(hostname())}-${process.pid}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}`,
+      deliverPolicy: 'new',
+    },
   );
+}
+
+/** JetStream durable names allow only [A-Za-z0-9_-]. */
+function sanitiseDurable(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 32);
 }

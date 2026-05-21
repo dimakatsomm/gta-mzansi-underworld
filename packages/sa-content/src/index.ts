@@ -160,18 +160,58 @@ export const CONVENIENCE_STORES = [
 
 /**
  * Common vehicle colors used in dispatch descriptions.
- * Kept neutral — no brand/model references.
+ * SA-authentic mix of English + Afrikaans street terms (lore-bible §3).
+ * No brand/model references.
  */
 export const VEHICLE_COLORS = [
   'white',
+  'wit',
   'silver',
+  'silwer',
   'black',
+  'swart',
   'red',
+  'rooi',
   'blue',
+  'blou',
   'grey',
+  'groen',
   'dark green',
   'dark blue',
 ] as const;
+
+/**
+ * Inlined dispatch templates — keyed by 3-digit ID, value is the raw `.tmpl`
+ * text with `{{placeholders}}` still in place. Substitutions are applied by the
+ * dispatch engine (`buildTier0Summary`). Inlined (not loaded from `.tmpl` files)
+ * so the templates ship with the compiled package and work inside containers
+ * where `src/templates` is not present.
+ *
+ * Editing rules: keep text under 240 chars, keep at most one `{{...}}` per line
+ * of dialogue, and stay aligned with lore-bible §dispatch tone.
+ */
+export const DISPATCH_TEMPLATES: Record<string, string> = {
+  '001':
+    "Eish, all units — we've got a hijacking at Hillbrow taxi rank. Suspect fled south in a white BMW. {{slang.casual}} bra, move now!",
+  '002':
+    'Control to all units in the kasi — robbery in progress at Yeoville corner shop. Two suspects, one armed with a firearm. {{slang.street}}, respond asap.',
+  '003':
+    'Units, units — body found in Alexandra Section 7. Looks like a hit. {{name.given.m}} {{name.surname}} reporting from scene. Perimeter up, nobody in or out.',
+  '004':
+    'Shots fired near Braamfontein campus. Multiple witnesses running. Suspect last seen heading towards the CBD. All available units requested.',
+  '005':
+    'Attention, attention — a CIT truck robbery attempted at Sandton Drive. Suspects in a red bakkie, registration unknown. Armed and dangerous. Do not approach without backup.',
+  '006':
+    'Drug deal spotted at the Newtown underpass — three males, one female. Unit {{name.given.m}} {{name.surname}} requesting backup before moving in. {{slang.casual}}, this one looks serious.',
+  '007':
+    'Vehicle pursuit active — stolen silver Polo heading north on Louis Botha. Driver reckless, running lights. Any unit in range, cut them off at the bridge.',
+  '008':
+    'Code 10 at Soweto Diepkloof — domestic dispute turned violent. Neighbours called it in. Tread soft, {{slang.street}}, there are kids inside.',
+  '009':
+    "Alert: suspicious package reported outside the Magistrate's Court, CBD. Bomb disposal requested. All units maintain 100-metre cordon. No civilians in the zone.",
+  '010':
+    'Update on the Hillbrow incident — suspect apprehended by {{name.given.m}} {{name.surname}}. Victim transported to Helen Joseph. Scene is clear. {{slang.casual}}, good work out there.',
+};
 
 /**
  * ElevenLabs voice ID for the PPS (Provincial Police Service) dispatcher.

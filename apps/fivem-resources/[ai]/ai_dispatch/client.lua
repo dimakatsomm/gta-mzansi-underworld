@@ -54,7 +54,11 @@ RegisterNetEvent('ai_dispatch:showIncident', function(data)
   PlaySoundFrontend(-1, 'SCANNING_POLICE', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
 end)
 
--- /dispatch toggle mute (police job only — server enforces job check via event)
+-- /dispatch — client-side mute toggle for the local player. This is a personal
+-- preference (e.g. silencing chatter while filming) and is NOT a permission
+-- gate: incident events are already filtered server-side via the police-job
+-- broadcast list in ai_dispatch/server.lua, so non-police players don't
+-- receive them in the first place.
 RegisterCommand('dispatch', function()
   isMuted = not isMuted
   lib.notify({

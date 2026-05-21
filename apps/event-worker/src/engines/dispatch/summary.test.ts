@@ -154,4 +154,25 @@ describe('generateDispatchSummary — idempotency', () => {
     const result = await generateDispatchSummary(event, redis as never, ORCHESTRATOR_URL);
     expect(result.tier).toBe(0);
   });
+
+  it('preserves Tier 1 on cached read', async () => {
+    const event = makeCrimeEvent({ crimeId: 'cached-tier-1-004' });
+    const cachedJson = JSON.stringify({ summary: 'cached tier-1 text', tier: 1 });
+    const redis = makeRedis({ [dispatchCacheKey(event.data.crimeId)]: cachedJson });
+    const result = await generateDispatchSummary(event, redis as never, ORCHESTRATOR_URL);
+    expect(result.cached).toBe(true);
+    expect(result.tier).toBe(1);
+    expect(result.summary).toBe('cached tier-1 text');
+  });
+
+  it('treats legacy plain-string cache entries as Tier 0', async () => {
+    const event = makeCrimeEvent({ crimeId: 'legacy-cache-005' });
+    const redis = makeRedis({
+      [dispatchCacheKey(event.data.crimeId)]: 'legacy plain string',
+    });
+    const result = await generateDispatchSummary(event, redis as never, ORCHESTRATOR_URL);
+    expect(result.cached).toBe(true);
+    expect(result.tier).toBe(0);
+    expect(result.summary).toBe('legacy plain string');
+  });
 });

@@ -49,14 +49,18 @@ async function main() {
   );
   redis.on('error', (err: Error) => console.error('[event-worker] Redis error:', err));
 
-  // Dispatch engine needs redis + orchestratorUrl before registration.
+  // Dispatch engine registration must happen before startBridge() so the
+  // worker picks up its handler immediately. The engine needs the shared
+  // EventBus (created inside startBridge) for publishing, so we register the
+  // consumer first and finish init with the bus once the bridge is up.
   const AI_ORCHESTRATOR_URL = process.env['AI_ORCHESTRATOR_URL'] ?? 'http://localhost:3002';
-  initDispatchEngine({ redis, orchestratorUrl: AI_ORCHESTRATOR_URL, natsUrl: NATS_URL });
   registerDispatchEngine();
 
   // ── BullMQ bridge ─────────────────────────────────────────────────────────
   const bridge = await startBridge({ natsUrl: NATS_URL, redisUrl: REDIS_URL });
   console.log(`[event-worker] BullMQ bridge started — NATS: ${redactUrl(NATS_URL)}`);
+
+  initDispatchEngine({ redis, orchestratorUrl: AI_ORCHESTRATOR_URL, bus: bridge.bus });
 
   // ── Heartbeat ─────────────────────────────────────────────────────────────
   const heartbeat = setInterval(() => {

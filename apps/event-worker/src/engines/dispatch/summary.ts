@@ -32,24 +32,52 @@ export async function generateDispatchSummary(
 ): Promise<SummaryResult> {
   const key = dispatchCacheKey(event.data.crimeId);
 
-  // 1 — idempotency check
+  // 1 — idempotency check. Cache stores `{tier,summary}` JSON so the original
+  // tier survives retries (Grafana Tier-0 dominance would skew otherwise).
+  // Legacy plain-string entries are still accepted and assumed tier 0.
   const cached = await redis.get(key);
   if (cached) {
+    const parsed = tryParseCached(cached);
+    if (parsed) {
+      return { summary: parsed.summary, tier: parsed.tier, cached: true };
+    }
     return { summary: cached, tier: 0, cached: true };
   }
 
   // 2 — Tier 0 template
   const tier0 = buildTier0Summary(event);
   if (tier0 !== null) {
-    await redis.set(key, tier0, 'EX', IDEMPOTENT_TTL_SEC);
+    await writeCached(redis, key, { summary: tier0, tier: 0 });
     return { summary: tier0, tier: 0, cached: false };
   }
 
   // 3 — Tier 1 fallback (novel severity bucket with no template)
   const suspectDesc = buildSuspectDescription(event);
   const tier1 = await callTier1(event, suspectDesc, orchestratorUrl);
-  await redis.set(key, tier1, 'EX', IDEMPOTENT_TTL_SEC);
+  await writeCached(redis, key, { summary: tier1, tier: 1 });
   return { summary: tier1, tier: 1, cached: false };
+}
+
+interface CachedSummary {
+  summary: string;
+  tier: 0 | 1;
+}
+
+function tryParseCached(raw: string): CachedSummary | null {
+  if (!raw.startsWith('{')) return null;
+  try {
+    const obj = JSON.parse(raw) as Partial<CachedSummary>;
+    if (typeof obj?.summary === 'string' && (obj.tier === 0 || obj.tier === 1)) {
+      return { summary: obj.summary, tier: obj.tier };
+    }
+  } catch {
+    // fall through — treat as plain string
+  }
+  return null;
+}
+
+async function writeCached(redis: Redis, key: string, value: CachedSummary): Promise<void> {
+  await redis.set(key, JSON.stringify(value), 'EX', IDEMPOTENT_TTL_SEC);
 }
 
 async function callTier1(

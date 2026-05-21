@@ -1,12 +1,10 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
   SLANG,
   SURNAMES,
   FIRST_NAMES,
   CONVENIENCE_STORES,
   VEHICLE_COLORS,
+  DISPATCH_TEMPLATES,
 } from '@gtarp/sa-content';
 import type { CrimeCommitted } from '@gtarp/event-schema';
 
@@ -41,31 +39,9 @@ const TEMPLATE_POOL: Record<string, readonly string[]> = {
 
 const FALLBACK_POOL: readonly string[] = ['002', '004'];
 
-/** Resolve absolute path to the sa-content templates directory. */
-function templatesDir(): string {
-  // Walk up from this file: apps/event-worker/src/engines/dispatch
-  // → packages/sa-content/src/templates/dispatch
-  const thisDir = fileURLToPath(new URL('.', import.meta.url));
-  return resolve(thisDir, '../../../../../packages/sa-content/src/templates/dispatch');
-}
-
-let _cache: Map<string, string> | undefined;
-
-function loadTemplates(): Map<string, string> {
-  if (_cache) return _cache;
-  const dir = templatesDir();
-  const map = new Map<string, string>();
-  for (let i = 1; i <= 10; i++) {
-    const id = String(i).padStart(3, '0');
-    try {
-      const content = readFileSync(resolve(dir, `${id}.tmpl`), 'utf8').trim();
-      map.set(id, content);
-    } catch {
-      // template file missing — skip
-    }
-  }
-  _cache = map;
-  return _cache;
+/** Templates ship inlined inside `@gtarp/sa-content` — no fs reads at runtime. */
+function loadTemplates(): Record<string, string> {
+  return DISPATCH_TEMPLATES;
 }
 
 // Seeded PRNG (mulberry32) — deterministic on crimeId
@@ -104,7 +80,7 @@ export function buildTier0Summary(event: CrimeCommitted): string | null {
 
   const rng = mulberry32(strToSeed(event.data.crimeId));
   const templateId = pickFrom(pool, rng);
-  const raw = templates.get(templateId);
+  const raw = templates[templateId];
   if (!raw) return null;
 
   // Apply placeholder substitutions using seeded RNG for determinism
