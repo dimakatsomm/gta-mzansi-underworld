@@ -13,8 +13,12 @@
     "clean": "rimraf dist .turbo"
   },
   "dependencies": {
+    "@gtarp/ai-clients": "workspace:*",
+    "@gtarp/db": "workspace:*",
+    "@gtarp/shared-types": "workspace:*",
     "dotenv": "^16.4.5",
     "fastify": "^4.28.1",
+    "ioredis": "^5.4.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
