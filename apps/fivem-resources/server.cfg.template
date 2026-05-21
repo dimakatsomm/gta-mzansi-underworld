@@ -43,4 +43,4 @@ ensure [crime]/robbery
 ensure [crime]/hijack
 ensure [ai]/ai_dispatch
 ensure [ai]/ai_witness
-ensure [police]/mdt
+# ensure [police]/mdt   # added by feat([police]/mdt) — uncomment after that PR merges

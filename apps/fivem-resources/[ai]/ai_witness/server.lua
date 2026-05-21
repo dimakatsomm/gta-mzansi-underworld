@@ -107,10 +107,13 @@ RegisterNetEvent('ai_witness:reportWitness', function(data)
 
   PerformHttpRequest(
     BACKEND_URL .. '/events',
-    function(statusCode, _, _headers)
+    function(statusCode, responseBody, _headers)
       if statusCode == 201 or statusCode == 200 then
         print(('[ai_witness] published witness.observed crimeId=%s witnessId=%s'):format(
           data.crimeId, witnessId))
+      else
+        print(('[ai_witness] FAILED witness.observed crimeId=%s witnessId=%s status=%s body=%s'):format(
+          data.crimeId, witnessId, tostring(statusCode), tostring(responseBody):sub(1, 120)))
       end
     end,
     'POST',
