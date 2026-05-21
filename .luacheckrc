@@ -68,6 +68,7 @@ read_globals = {
   -- Vehicle
   "GetVehiclePedIsIn",
   "GetClosestVehicle",
+  "GetGamePool",
   "SetVehicleEngineOn",
   "SetVehicleDirtLevel",
 
