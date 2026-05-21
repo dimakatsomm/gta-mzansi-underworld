@@ -25,7 +25,7 @@ pnpm fivem:dev   # from repo root — starts txAdmin container
 ```
 
 > **Git submodules alternative**: if cloned with `--recurse-submodules` the deps
-> are already present. To update pinned versions later: `pnpm fivem:update`.
+> are already present. To update pinned versions later see the **Updating** section below.
 
 The txAdmin UI is at http://localhost:40120. First run prompts for a PIN.
 
@@ -47,7 +47,17 @@ The txAdmin UI is at http://localhost:40120. First run prompts for a PIN.
 | ox_inventory | 2.35.1  | https://github.com/overextended/ox_inventory |
 | qbx_core     | 1.37.0  | https://github.com/Qbox-project/qbx_core     |
 
-To update: bump version tags in `server.cfg.template` and `.gitmodules`, delete the old dep directories, then re-run `pnpm fivem:deps`.
+**To update — deps script path** (default, no git submodules):
+
+1. Bump version tags in `server.cfg.template` and `scripts/fetch-deps.mjs`.
+2. Delete the old dep directories (`ox_lib/`, `ox_inventory/`, `qbx_core/`).
+3. Re-run `pnpm fivem:deps`.
+
+**To update — git submodules path** (if you cloned with `--recurse-submodules`):
+
+1. Update the recorded submodule commit: `git -C apps/fivem-resources/<name> fetch --tags && git -C apps/fivem-resources/<name> checkout v<new-tag>`.
+2. Stage the submodule pointer: `git add apps/fivem-resources/<name>`.
+3. Run `pnpm fivem:update` to confirm all submodules match the recorded commits.
 
 ## Environment variables
 

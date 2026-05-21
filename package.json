@@ -19,7 +19,7 @@
     "clean": "turbo run clean && rimraf node_modules",
     "prepare": "husky",
     "fivem:dev": "docker compose -f apps/fivem-resources/docker-compose.yml up",
-    "fivem:deps": "powershell -ExecutionPolicy Bypass -File apps/fivem-resources/scripts/Get-FivemDeps.ps1",
+    "fivem:deps": "node apps/fivem-resources/scripts/fetch-deps.mjs",
     "fivem:update": "git submodule update --init --recursive apps/fivem-resources/ox_lib apps/fivem-resources/ox_inventory apps/fivem-resources/qbx_core"
   },
   "devDependencies": {

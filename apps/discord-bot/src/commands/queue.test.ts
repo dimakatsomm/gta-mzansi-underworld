@@ -60,7 +60,7 @@ describe('queueHandler — position subcommand', () => {
     await queueHandler(interaction);
 
     expect(interaction.reply).toHaveBeenCalledTimes(1);
-    const call = (interaction.reply as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
+    const call = (interaction.reply as ReturnType<typeof vi.fn>).mock.calls[0]![0] as {
       content: string;
       flags: number;
     };

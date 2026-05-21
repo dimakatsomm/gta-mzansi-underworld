@@ -1,12 +1,22 @@
 import { MessageFlags, SlashCommandBuilder, type ChatInputCommandInteraction } from 'discord.js';
 
-/** Helper — returns true when the caller has a Moderator or Admin role. */
+/** Returns true when the caller has a Moderator or Admin role.
+ *
+ * Handles two member shapes discord.js may give us:
+ * - GuildMember (cached): roles is a Collection — match by role name.
+ * - APIInteractionGuildMember (not cached): roles is string[] of IDs —
+ *   match against DISCORD_MOD_ROLE_IDS env var (comma-separated role IDs).
+ */
 function isMod(interaction: ChatInputCommandInteraction): boolean {
   const member = interaction.member;
   if (!member || !('roles' in member)) return false;
   const roles = member.roles;
+  if (Array.isArray(roles)) {
+    // APIInteractionGuildMember path: roles is string[] of IDs
+    const modRoleIds = (process.env['DISCORD_MOD_ROLE_IDS'] ?? '').split(',').filter(Boolean);
+    return modRoleIds.length > 0 && roles.some((id) => modRoleIds.includes(id));
+  }
   if (typeof roles === 'string') return false;
-  if (Array.isArray(roles)) return false;
   return roles.cache.some((r) => r.name === 'Moderator' || r.name === 'Admin');
 }
 
@@ -24,14 +34,16 @@ async function postModLog(
   }
   try {
     const channel = await interaction.client.channels.fetch(channelId);
-    if (!channel || !channel.isTextBased()) {
-      console.warn(`[mod] Channel ${channelId} not found or not text-based`);
+    // Exclude DM-based channels (includes PartialGroupDMChannel which lacks .send)
+    if (!channel || !channel.isTextBased() || channel.isDMBased()) {
+      console.warn(`[mod] Channel ${channelId} not found or not a guild text channel`);
       return;
     }
     const mod = interaction.user.tag;
-    await channel.send(
-      `[${action}] Moderator: **${mod}** | Target: **${target}** | Reason: ${reason}`,
-    );
+    await channel.send({
+      content: `[${action}] Moderator: **${mod}** | Target: **${target}** | Reason: ${reason}`,
+      allowedMentions: { parse: [] },
+    });
   } catch (err) {
     console.error('[mod] Failed to post to mod-log channel:', err);
   }

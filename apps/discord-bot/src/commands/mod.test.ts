@@ -106,10 +106,10 @@ describe('modHandler — kick subcommand', () => {
 
     expect(_channelFetchMock).toHaveBeenCalledWith('log-channel-123');
     expect(_sendMock).toHaveBeenCalledTimes(1);
-    const logMsg: string = _sendMock.mock.calls[0][0] as string;
-    expect(logMsg).toContain('KICK');
-    expect(logMsg).toContain('BadPlayer');
-    expect(logMsg).toContain('RDM');
+    const logPayload = _sendMock.mock.calls[0]![0] as { content: string };
+    expect(logPayload.content).toContain('KICK');
+    expect(logPayload.content).toContain('BadPlayer');
+    expect(logPayload.content).toContain('RDM');
 
     expect(interaction.reply).toHaveBeenCalledWith({
       content: 'Kick logged.',
@@ -141,10 +141,10 @@ describe('modHandler — ban subcommand', () => {
 
     expect(_channelFetchMock).toHaveBeenCalledWith('log-channel-456');
     expect(_sendMock).toHaveBeenCalledTimes(1);
-    const logMsg: string = _sendMock.mock.calls[0][0] as string;
-    expect(logMsg).toContain('BAN');
-    expect(logMsg).toContain('GrieferPlayer');
-    expect(logMsg).toContain('Cheating');
+    const logPayload = _sendMock.mock.calls[0]![0] as { content: string };
+    expect(logPayload.content).toContain('BAN');
+    expect(logPayload.content).toContain('GrieferPlayer');
+    expect(logPayload.content).toContain('Cheating');
 
     expect(interaction.reply).toHaveBeenCalledWith({
       content: 'Ban logged.',

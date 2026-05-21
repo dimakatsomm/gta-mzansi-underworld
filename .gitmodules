@@ -1,14 +1,11 @@
 [submodule "apps/fivem-resources/ox_lib"]
 	path = apps/fivem-resources/ox_lib
 	url = https://github.com/overextended/ox_lib
-	branch = v3.14.0
 
 [submodule "apps/fivem-resources/ox_inventory"]
 	path = apps/fivem-resources/ox_inventory
 	url = https://github.com/overextended/ox_inventory
-	branch = v2.35.1
 
 [submodule "apps/fivem-resources/qbx_core"]
 	path = apps/fivem-resources/qbx_core
 	url = https://github.com/Qbox-project/qbx_core
-	branch = v1.37.0

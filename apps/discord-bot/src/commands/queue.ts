@@ -1,17 +1,21 @@
 import { MessageFlags, SlashCommandBuilder, type ChatInputCommandInteraction } from 'discord.js';
 
-/** Helper — returns true when the caller has a Moderator or Admin role. */
+/** Returns true when the caller has a Moderator or Admin role.
+ *
+ * Handles two member shapes discord.js may give us:
+ * - GuildMember (cached): roles is a Collection — match by role name.
+ * - APIInteractionGuildMember (not cached): roles is string[] of IDs —
+ *   match against DISCORD_MOD_ROLE_IDS env var (comma-separated role IDs).
+ */
 function isMod(interaction: ChatInputCommandInteraction): boolean {
   const member = interaction.member;
   if (!member || !('roles' in member)) return false;
   const roles = member.roles;
-  // roles can be a Collection or a string array in the API types
-  if (typeof roles === 'string') return false;
   if (Array.isArray(roles)) {
-    // rare raw string-array path — not used in practice but satisfies types
-    return false;
+    const modRoleIds = (process.env['DISCORD_MOD_ROLE_IDS'] ?? '').split(',').filter(Boolean);
+    return modRoleIds.length > 0 && roles.some((id) => modRoleIds.includes(id));
   }
-  // GuildMemberRoleManager (Collection-like)
+  if (typeof roles === 'string') return false;
   return roles.cache.some((r) => r.name === 'Moderator' || r.name === 'Admin');
 }
 

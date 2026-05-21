@@ -9,15 +9,16 @@ export async function policeRoute(app: FastifyInstance, opts: PolicePluginOption
   const { prisma } = opts;
 
   app.get('/police/mdt/search', async (req, reply) => {
-    // Auth
-    const token = req.headers['x-fivem-ingest-token'];
+    // Auth — normalize header value (Fastify may give string | string[])
+    const rawToken = req.headers['x-fivem-ingest-token'];
+    const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
     if (!token || token !== process.env['FIVEM_INGEST_TOKEN']) {
       return reply.status(401).send({ error: 'Unauthorized' });
     }
 
-    // Query param validation
-    const { q } = req.query as Record<string, string | undefined>;
-    if (!q) {
+    // Query param validation — guard against string[] (e.g. ?q=a&q=b)
+    const { q } = req.query as Record<string, unknown>;
+    if (!q || typeof q !== 'string') {
       return reply.status(400).send({ error: 'Missing query parameter: q' });
     }
     if (q.length < 2 || q.length > 60) {
