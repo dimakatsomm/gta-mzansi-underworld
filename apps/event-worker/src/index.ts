@@ -6,6 +6,7 @@ import { startBridge } from './bridge/index.js';
 import { registry } from './metrics.js';
 import { registerReputationEngine } from './engines/reputation/index.js';
 import { registerDispatchEngine, initDispatchEngine } from './engines/dispatch/index.js';
+import { registerWitnessEngine, initWitnessEngine } from './engines/witness/index.js';
 
 function parsePort(raw: string | undefined, fallback: number, name: string): number {
   if (raw === undefined || raw === '') return fallback;
@@ -38,6 +39,7 @@ async function main() {
   // Engines must be registered before startBridge() so Workers pick up
   // handlers on their first job.
   registerReputationEngine();
+  registerWitnessEngine();
 
   // ── Redis ─────────────────────────────────────────────────────────────────
   // JetStream stream lifecycle (create + config) is owned by @gtarp/event-bus
@@ -61,6 +63,7 @@ async function main() {
   console.log(`[event-worker] BullMQ bridge started — NATS: ${redactUrl(NATS_URL)}`);
 
   initDispatchEngine({ redis, orchestratorUrl: AI_ORCHESTRATOR_URL, bus: bridge.bus });
+  initWitnessEngine({ redis, bus: bridge.bus });
 
   // ── Heartbeat ─────────────────────────────────────────────────────────────
   const heartbeat = setInterval(() => {

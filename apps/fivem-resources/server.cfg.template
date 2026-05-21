@@ -42,3 +42,5 @@ ensure qbx_core
 ensure [crime]/robbery
 ensure [crime]/hijack
 ensure [ai]/ai_dispatch
+ensure [ai]/ai_witness
+ensure [police]/mdt

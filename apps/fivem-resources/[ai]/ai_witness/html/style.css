@@ -1,0 +1,25 @@
+/* ai_witness NUI — minimal toast notification */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: transparent; font-family: 'Courier New', monospace; }
+body.hidden { display: none; }
+
+#witness-toast {
+  position: fixed;
+  bottom: 120px;
+  right: 20px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid #475569;
+  border-radius: 6px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #e2e8f0;
+  font-size: .75rem;
+  animation: fadeIn .3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

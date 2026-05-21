@@ -151,6 +151,21 @@ export const WitnessObserved = EventEnvelope.extend({
   }),
 });
 
+export const WitnessStatement = EventEnvelope.extend({
+  type: z.literal('witness.statement'),
+  version: z.literal(1),
+  data: z.object({
+    crimeId: z.string().uuid(),
+    witnessId: z.string(),
+    /** Quality-adjusted statement text (SA-authentic English/Zulu/Afrikaans mix). */
+    statement: z.string(),
+    /** 0–1: how reliable is this statement (affected by all quality factors). */
+    reliability: z.number().min(0).max(1),
+    /** True when the witness is willing to provide official testimony. */
+    willing: z.boolean(),
+  }),
+});
+
 export const DomainEvent = z.discriminatedUnion('type', [
   CrimeCommitted,
   ArrestMade,
@@ -161,6 +176,7 @@ export const DomainEvent = z.discriminatedUnion('type', [
   ChildBorn,
   DispatchRequested,
   WitnessObserved,
+  WitnessStatement,
 ]);
 
 export type DomainEvent = z.infer<typeof DomainEvent>;
@@ -173,6 +189,7 @@ export type FamilyFormed = z.infer<typeof FamilyFormed>;
 export type ChildBorn = z.infer<typeof ChildBorn>;
 export type DispatchRequested = z.infer<typeof DispatchRequested>;
 export type WitnessObserved = z.infer<typeof WitnessObserved>;
+export type WitnessStatement = z.infer<typeof WitnessStatement>;
 
 export const SUBJECT_PREFIX = 'gtarp';
 export const subjectFor = (type: DomainEvent['type']): string => `${SUBJECT_PREFIX}.${type}`;

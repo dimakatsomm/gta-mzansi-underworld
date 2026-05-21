@@ -21,7 +21,15 @@ function reg(name: ConsumerRegistration['name'], subjects: string[]): ConsumerRe
 
 describe('CONSUMER_NAMES', () => {
   it('contains every engine queue exactly once', () => {
-    expect(CONSUMER_NAMES).toEqual(['reputation', 'story', 'media', 'gang', 'economy', 'dispatch']);
+    expect(CONSUMER_NAMES).toEqual([
+      'reputation',
+      'story',
+      'media',
+      'gang',
+      'economy',
+      'dispatch',
+      'witness',
+    ]);
     expect(new Set(CONSUMER_NAMES).size).toBe(CONSUMER_NAMES.length);
   });
 });

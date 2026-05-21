@@ -8,6 +8,7 @@ export const CONSUMER_NAMES = [
   'gang',
   'economy',
   'dispatch',
+  'witness',
 ] as const;
 export type ConsumerName = (typeof CONSUMER_NAMES)[number];
 
