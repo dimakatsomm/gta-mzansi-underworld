@@ -1,0 +1,43 @@
+# FiveM Server Configuration Template
+# Sensitive values (licence key, tokens) must be set via environment variables or .env
+# Never commit server.cfg — only server.cfg.template is tracked.
+
+# ── Identity ─────────────────────────────────────────────────────────────────
+sv_projectName "Mzansi Underworld RP — Development"
+sv_projectDesc "AI-powered South African GTA RP. Phase 1 internal."
+sv_maxClients 32
+
+# ── Licence ──────────────────────────────────────────────────────────────────
+# Set via .env: SV_LICENCEKEY
+sv_licenceKey ""
+
+# ── Backend tokens ───────────────────────────────────────────────────────────
+# Set via .env: FIVEM_INGEST_TOKEN, BACKEND_URL
+set FIVEM_INGEST_TOKEN ""
+set BACKEND_URL "http://host.docker.internal:3001"
+set AI_ORCHESTRATOR_URL "http://host.docker.internal:3002"
+
+# ── Endpoints ────────────────────────────────────────────────────────────────
+endpoint_add_tcp "0.0.0.0:30120"
+endpoint_add_udp "0.0.0.0:30120"
+
+# ── QBox framework ───────────────────────────────────────────────────────────
+# Pinned versions — update in concert with pnpm fivem:update
+# ox_lib   3.14.0  https://github.com/overextended/ox_lib/releases/tag/v3.14.0
+# ox_inventory 2.35.1 https://github.com/overextended/ox_inventory/releases/tag/v2.35.1
+# qbx_core 1.37.0  https://github.com/Qbox-project/qbx_core/releases/tag/v1.37.0
+
+ensure mapmanager
+ensure chat
+ensure spawnmanager
+ensure sessionmanager
+ensure basic-gamemode
+ensure hardcap
+ensure rconlog
+ensure ox_lib
+ensure ox_inventory
+ensure qbx_core
+
+# ── Custom resources ─────────────────────────────────────────────────────────
+ensure [crime]/robbery
+ensure [ai]/ai_dispatch

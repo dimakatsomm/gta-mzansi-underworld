@@ -128,6 +128,8 @@ export const DispatchRequested = EventEnvelope.extend({
     severity: Severity,
     location: Geo,
     summary: z.string(),
+    /** URL of synthesized voice audio. Optional — absent when voice synthesis is unavailable. */
+    voiceUrl: z.string().optional(),
   }),
 });
 

@@ -17,7 +17,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "clean": "turbo run clean && rimraf node_modules",
-    "prepare": "husky"
+    "prepare": "husky",
+    "fivem:dev": "docker compose -f apps/fivem-resources/docker-compose.yml up"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

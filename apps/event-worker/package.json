@@ -16,6 +16,7 @@
     "@gtarp/db": "workspace:*",
     "@gtarp/event-bus": "workspace:*",
     "@gtarp/event-schema": "workspace:*",
+    "@gtarp/sa-content": "workspace:*",
     "bullmq": "^5.56.0",
     "dotenv": "^16.4.5",
     "fastify": "^4.28.1",

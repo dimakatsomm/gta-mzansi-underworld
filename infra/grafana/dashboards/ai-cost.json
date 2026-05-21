@@ -2,7 +2,7 @@
   "uid": "ai-cost-001",
   "title": "AI Cost Dashboard",
   "schemaVersion": 38,
-  "version": 1,
+  "version": 2,
   "refresh": "1m",
   "panels": [
     {
@@ -45,10 +45,62 @@
         "textMode": "auto",
         "colorMode": "value"
       }
+    },
+    {
+      "id": 3,
+      "title": "Dispatch — Tier 0 Dominance (% of dispatch calls)",
+      "description": "ADR-0004 target: Tier 0 dominant for dispatch purpose. Should stay ≥ 70% under smoke load.",
+      "type": "gauge",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 4 },
+      "targets": [
+        {
+          "expr": "100 * sum(rate(ai_calls_total{purpose=\"dispatch\",tier=\"0\"}[5m])) / sum(rate(ai_calls_total{purpose=\"dispatch\"}[5m]))",
+          "legendFormat": "Tier 0 %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": 0 },
+              { "color": "yellow", "value": 50 },
+              { "color": "green", "value": 70 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "id": 4,
+      "title": "Dispatch Calls by Tier (rate/5m)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "rate(ai_calls_total{purpose=\"dispatch\"}[5m])",
+          "legendFormat": "tier={{tier}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": { "mode": "palette-classic" }
+        }
+      }
     }
   ],
   "time": { "from": "now-24h", "to": "now" },
   "timepicker": {},
   "timezone": "Africa/Johannesburg",
-  "tags": ["ai", "cost", "gtarp"]
+  "tags": ["ai", "cost", "gtarp", "dispatch"]
 }

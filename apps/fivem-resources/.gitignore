@@ -1,0 +1,6 @@
+# server.cfg holds the real licence key and tokens — never commit it.
+server.cfg
+.env
+
+# txAdmin data folder (contains DB, logs, player data)
+txData/

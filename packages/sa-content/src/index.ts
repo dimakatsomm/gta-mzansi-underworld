@@ -142,3 +142,40 @@ export const FIRST_NAMES = {
 };
 
 export type Slang = (typeof SLANG)[number];
+
+/**
+ * Fictional convenience store / spaza shop names for dispatch templates.
+ * Source: lore-bible §1 (composite SA metropolis, Joburg/Yeoville/Hillbrow analogues).
+ */
+export const CONVENIENCE_STORES = [
+  'Yeoville Corner Shop',
+  'Hillbrow Spaza',
+  'Kasi Quick Mart',
+  'Diepkloof General',
+  'Braamfontein 24/7',
+  'Fordsburg Mini Market',
+  'Alexandra Tuck Shop',
+  'Tembisa Corner Store',
+] as const;
+
+/**
+ * Common vehicle colors used in dispatch descriptions.
+ * Kept neutral — no brand/model references.
+ */
+export const VEHICLE_COLORS = [
+  'white',
+  'silver',
+  'black',
+  'red',
+  'blue',
+  'grey',
+  'dark green',
+  'dark blue',
+] as const;
+
+/**
+ * ElevenLabs voice ID for the PPS (Provincial Police Service) dispatcher.
+ * Canonical voice for AI dispatch audio — change requires ADR.
+ * Value is the ElevenLabs voice ID string; set ELEVENLABS_DISPATCH_VOICE_ID env to override.
+ */
+export const DISPATCH_VOICE_ID = 'ErXwobaYiN019PkySvjV' as const;

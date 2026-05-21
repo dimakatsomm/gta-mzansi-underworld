@@ -1,11 +1,13 @@
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
+import websocket from '@fastify/websocket';
 import type { PrismaClient } from '@gtarp/db';
 import type { EventBus } from '@gtarp/event-bus';
 import type { Redis } from 'ioredis';
 import { healthzRoute } from './routes/healthz.js';
 import { eventsRoute } from './routes/events.js';
+import { wsRoute } from './routes/ws.js';
 
 export interface BuildServerOptions {
   prisma?: PrismaClient;
@@ -21,6 +23,8 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<Fastif
   if (opts.prisma && opts.eventBus && opts.redis) {
     await app.register(rateLimit, { global: false, redis: opts.redis });
     await app.register(eventsRoute, { prisma: opts.prisma, eventBus: opts.eventBus });
+    await app.register(websocket);
+    await app.register(wsRoute, { eventBus: opts.eventBus });
   }
 
   return app;
