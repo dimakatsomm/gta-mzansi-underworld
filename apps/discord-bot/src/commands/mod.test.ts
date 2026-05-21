@@ -34,7 +34,7 @@ describe('mod slash command', () => {
 // Handler helpers
 // ---------------------------------------------------------------------------
 
-/** Build a minimal ChatInputCommandInteraction mock. */
+/** Build a minimal interaction mock using the GuildMember (cached) roles shape. */
 function makeInteraction(
   subcommand: string,
   hasModRole: boolean,
@@ -58,6 +58,34 @@ function makeInteraction(
       getString: (name: string) => (name === 'target' ? target : reason),
     },
     member: { roles },
+    user: { tag: 'TestMod#0001' },
+    client: { channels: { fetch: channelFetchMock } },
+    reply: vi.fn().mockResolvedValue(undefined),
+    _sendMock: sendMock,
+    _channelFetchMock: channelFetchMock,
+  } as unknown as ChatInputCommandInteraction;
+}
+
+/** Build an interaction mock using the APIInteractionGuildMember (uncached) roles shape. */
+function makeInteractionWithRoleIds(
+  subcommand: string,
+  memberRoleIds: string[],
+  target = 'PlayerName',
+  reason = 'Test reason',
+): ChatInputCommandInteraction {
+  const sendMock = vi.fn().mockResolvedValue(undefined);
+  const channelFetchMock = vi.fn().mockResolvedValue({
+    isTextBased: () => true,
+    isDMBased: () => false,
+    send: sendMock,
+  });
+
+  return {
+    options: {
+      getSubcommand: () => subcommand,
+      getString: (name: string) => (name === 'target' ? target : reason),
+    },
+    member: { roles: memberRoleIds },
     user: { tag: 'TestMod#0001' },
     client: { channels: { fetch: channelFetchMock } },
     reply: vi.fn().mockResolvedValue(undefined),
@@ -149,6 +177,60 @@ describe('modHandler — ban subcommand', () => {
 
     expect(interaction.reply).toHaveBeenCalledWith({
       content: 'Ban logged.',
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role-ID authorization (APIInteractionGuildMember uncached path)
+// ---------------------------------------------------------------------------
+
+describe('modHandler — role-ID authorization (uncached member)', () => {
+  const MOD_ROLE_ID = 'role-id-mod-999';
+
+  beforeEach(() => {
+    process.env['DISCORD_MOD_LOG_CHANNEL_ID'] = 'log-channel-roleids';
+    process.env['DISCORD_MOD_ROLE_IDS'] = MOD_ROLE_ID;
+  });
+  afterEach(() => {
+    delete process.env['DISCORD_MOD_LOG_CHANNEL_ID'];
+    delete process.env['DISCORD_MOD_ROLE_IDS'];
+  });
+
+  it('authorizes kick when member.roles string[] contains a configured mod role ID', async () => {
+    const interaction = makeInteractionWithRoleIds('kick', [MOD_ROLE_ID], 'Target', 'reason');
+    const { _sendMock } = interaction as unknown as { _sendMock: ReturnType<typeof vi.fn> };
+
+    await modHandler(interaction);
+
+    expect(_sendMock).toHaveBeenCalledTimes(1);
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: 'Kick logged.',
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+
+  it('authorizes ban when member.roles string[] contains a configured mod role ID', async () => {
+    const interaction = makeInteractionWithRoleIds('ban', [MOD_ROLE_ID], 'Target', 'reason');
+    const { _sendMock } = interaction as unknown as { _sendMock: ReturnType<typeof vi.fn> };
+
+    await modHandler(interaction);
+
+    expect(_sendMock).toHaveBeenCalledTimes(1);
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: 'Ban logged.',
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+
+  it('denies when member.roles string[] does not contain any configured mod role ID', async () => {
+    const interaction = makeInteractionWithRoleIds('kick', ['other-role-id']);
+
+    await modHandler(interaction);
+
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: 'Permission denied.',
       flags: MessageFlags.Ephemeral,
     });
   });

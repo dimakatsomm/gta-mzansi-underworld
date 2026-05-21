@@ -13,7 +13,10 @@ function isMod(interaction: ChatInputCommandInteraction): boolean {
   const roles = member.roles;
   if (Array.isArray(roles)) {
     // APIInteractionGuildMember path: roles is string[] of IDs
-    const modRoleIds = (process.env['DISCORD_MOD_ROLE_IDS'] ?? '').split(',').filter(Boolean);
+    const modRoleIds = (process.env['DISCORD_MOD_ROLE_IDS'] ?? '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
     return modRoleIds.length > 0 && roles.some((id) => modRoleIds.includes(id));
   }
   if (typeof roles === 'string') return false;

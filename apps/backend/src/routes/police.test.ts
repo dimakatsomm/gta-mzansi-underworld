@@ -63,7 +63,7 @@ describe('GET /police/mdt/search', () => {
   let app: FastifyInstance | undefined;
 
   beforeEach(() => {
-    process.env['FIVEM_INGEST_TOKEN'] = TEST_TOKEN;
+    vi.stubEnv('FIVEM_INGEST_TOKEN', TEST_TOKEN);
   });
 
   afterEach(async () => {
@@ -71,6 +71,7 @@ describe('GET /police/mdt/search', () => {
       await app.close();
       app = undefined;
     }
+    vi.unstubAllEnvs();
     vi.clearAllMocks();
   });
 

@@ -1,6 +1,6 @@
 import { MessageFlags } from 'discord.js';
 import type { ChatInputCommandInteraction } from 'discord.js';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { queueCommand, queueHandler } from './queue.js';
 
 // ---------------------------------------------------------------------------
@@ -34,17 +34,27 @@ describe('queue slash command', () => {
 // Handler helpers
 // ---------------------------------------------------------------------------
 
-/** Build a minimal ChatInputCommandInteraction mock. */
+/** Build a minimal interaction mock using the GuildMember (cached) roles shape. */
 function makeInteraction(subcommand: string, hasModRole: boolean): ChatInputCommandInteraction {
   const roles = hasModRole
     ? { cache: { some: (fn: (r: { name: string }) => boolean) => fn({ name: 'Moderator' }) } }
     : { cache: { some: () => false } };
 
   return {
-    options: {
-      getSubcommand: () => subcommand,
-    },
+    options: { getSubcommand: () => subcommand },
     member: { roles },
+    reply: vi.fn().mockResolvedValue(undefined),
+  } as unknown as ChatInputCommandInteraction;
+}
+
+/** Build an interaction mock using the APIInteractionGuildMember (uncached) roles shape. */
+function makeInteractionWithRoleIds(
+  subcommand: string,
+  memberRoleIds: string[],
+): ChatInputCommandInteraction {
+  return {
+    options: { getSubcommand: () => subcommand },
+    member: { roles: memberRoleIds },
     reply: vi.fn().mockResolvedValue(undefined),
   } as unknown as ChatInputCommandInteraction;
 }
@@ -92,6 +102,40 @@ describe('queueHandler — clear subcommand', () => {
     await queueHandler(interaction);
 
     expect(interaction.reply).toHaveBeenCalledTimes(1);
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: "You don't have permission.",
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role-ID authorization (APIInteractionGuildMember uncached path)
+// ---------------------------------------------------------------------------
+
+describe('queueHandler — clear, role-ID authorization (uncached member)', () => {
+  const MOD_ROLE_ID = 'role-id-queue-mod-42';
+
+  beforeEach(() => {
+    process.env['DISCORD_MOD_ROLE_IDS'] = MOD_ROLE_ID;
+  });
+  afterEach(() => {
+    delete process.env['DISCORD_MOD_ROLE_IDS'];
+  });
+
+  it('clears queue when member.roles string[] contains a configured mod role ID', async () => {
+    const interaction = makeInteractionWithRoleIds('clear', [MOD_ROLE_ID]);
+
+    await queueHandler(interaction);
+
+    expect(interaction.reply).toHaveBeenCalledWith({ content: 'Queue cleared.' });
+  });
+
+  it('denies when member.roles string[] does not contain any configured mod role ID', async () => {
+    const interaction = makeInteractionWithRoleIds('clear', ['other-id']);
+
+    await queueHandler(interaction);
+
     expect(interaction.reply).toHaveBeenCalledWith({
       content: "You don't have permission.",
       flags: MessageFlags.Ephemeral,
