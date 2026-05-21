@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Client } from 'discord.js';
+import { ChannelType, type Client } from 'discord.js';
 import type * as DispatchFeedModule from '../dispatch-feed.js';
 
 // Minimal stubs so the module can be imported without NATS/Discord
@@ -23,10 +23,25 @@ describe('dispatch-feed severity helpers', () => {
 
   it('startDispatchFeed returns a close function', async () => {
     const mockClient = {
-      channels: { cache: { get: vi.fn().mockReturnValue(null) } },
+      channels: {
+        fetch: vi.fn().mockResolvedValue({
+          type: ChannelType.GuildText,
+          send: vi.fn(),
+        }),
+      },
     } as unknown as Client;
 
     const close = await mod.startDispatchFeed(mockClient, 'test-channel-id');
     expect(typeof close).toBe('function');
+  });
+
+  it('throws when the channel is not a sendable GuildText channel', async () => {
+    const mockClient = {
+      channels: { fetch: vi.fn().mockResolvedValue(null) },
+    } as unknown as Client;
+
+    await expect(mod.startDispatchFeed(mockClient, 'bad-channel')).rejects.toThrow(
+      /not a sendable/,
+    );
   });
 });

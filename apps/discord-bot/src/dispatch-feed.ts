@@ -1,4 +1,5 @@
-import { EmbedBuilder, type TextChannel, type Client } from 'discord.js';
+import { hostname } from 'node:os';
+import { EmbedBuilder, ChannelType, type TextChannel, type Client } from 'discord.js';
 import { connect as connectBus } from '@gtarp/event-bus';
 import type { DispatchRequested } from '@gtarp/event-schema';
 
@@ -30,17 +31,29 @@ export async function startDispatchFeed(client: Client, channelId: string): Prom
   const natsUrl = process.env['NATS_URL'] ?? 'nats://localhost:4222';
   const bus = await connectBus({ servers: natsUrl });
 
+  // Resolve the channel once via fetch (cache may be cold/partial after a
+  // reconnect or restart). Fail fast at startup rather than silently skipping
+  // every incident.
+  const resolved = await client.channels.fetch(channelId);
+  if (!resolved || !('send' in resolved) || resolved.type !== ChannelType.GuildText) {
+    throw new Error(
+      `[discord-feed] channel ${channelId} is not a sendable GuildText channel (got ${resolved?.type ?? 'null'})`,
+    );
+  }
+  const channel = resolved as TextChannel;
+
+  // Each replica must post the full incident stream, so each gets its own
+  // JetStream durable consumer (hostname + pid + random suffix). A shared
+  // durable name would load-balance messages and only one bot would post.
+  const durableSuffix = `${sanitiseDurable(hostname())}-${process.pid}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
+
   const sub = await bus.subscribe(
     'gtarp.dispatch.requested',
     async (evt) => {
       if (evt.type !== 'dispatch.requested') return;
       const dispatch = evt as DispatchRequested;
-
-      const channel = client.channels.cache.get(channelId) as TextChannel | undefined;
-      if (!channel) {
-        console.warn(`[discord-feed] channel ${channelId} not in cache — skipping`);
-        return;
-      }
 
       const { severity, location, summary, incidentId } = dispatch.data;
       const colour = SEVERITY_COLOUR[severity] ?? 0xf59e0b;
@@ -62,11 +75,16 @@ export async function startDispatchFeed(client: Client, channelId: string): Prom
       await channel.send({ embeds: [embed] });
       console.log(`[discord-feed] posted incident ${incidentId} to channel ${channelId}`);
     },
-    { durableName: 'discord-feed', deliverPolicy: 'new' },
+    { durableName: `discord-feed-${durableSuffix}`, deliverPolicy: 'new' },
   );
 
   return () => {
     sub.close();
     void bus.close();
   };
+}
+
+/** JetStream durable names allow only [A-Za-z0-9_-]. */
+function sanitiseDurable(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 32);
 }
