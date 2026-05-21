@@ -1,6 +1,6 @@
 import { Queue, Worker, type Job } from 'bullmq';
 import { Redis } from 'ioredis';
-import { connect as connectBus } from '@gtarp/event-bus';
+import { connect as connectBus, type EventBus } from '@gtarp/event-bus';
 import type { DomainEvent } from '@gtarp/event-schema';
 import { CONSUMER_NAMES, getConsumersForSubject } from './registry.js';
 import {
@@ -11,6 +11,12 @@ import {
 } from '../metrics.js';
 
 export interface Bridge {
+  /**
+   * Long-lived EventBus used for the bridge subscription. Exposed so engines
+   * (e.g. dispatch) can publish on the same connection instead of opening a
+   * new one per event.
+   */
+  bus: EventBus;
   close(): Promise<void>;
 }
 
@@ -125,6 +131,7 @@ export async function startBridge(opts: { natsUrl?: string; redisUrl?: string })
   if (typeof queueDepthTimer.unref === 'function') queueDepthTimer.unref();
 
   return {
+    bus,
     async close() {
       clearInterval(queueDepthTimer);
       sub.close();

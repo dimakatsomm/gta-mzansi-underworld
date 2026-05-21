@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@fastify/rate-limit": "^9.1.0",
+    "@fastify/websocket": "^10.0.1",
     "@gtarp/db": "workspace:*",
     "@gtarp/event-bus": "workspace:*",
     "@gtarp/event-schema": "workspace:*",

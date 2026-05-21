@@ -1,0 +1,24 @@
+name: gtarp-fivem
+
+# txAdmin container for local FiveM development.
+# Requires: server.cfg filled from server.cfg.template, valid FiveM licence key in .env
+
+services:
+  fivem:
+    # Pinned tag — keep deterministic across dev machines. Bump deliberately
+    # via PR, never silently. See https://hub.docker.com/r/spritsail/fivem/tags
+    image: spritsail/fivem:13988
+    restart: unless-stopped
+    ports:
+      - '30120:30120/tcp'
+      - '30120:30120/udp'
+      - '40120:40120/tcp' # txAdmin web UI
+    volumes:
+      - ./:/server-data
+    environment:
+      - NO_LICENSE_KEY_OVERRIDE=0
+    env_file:
+      - .env
+    extra_hosts:
+      # Allow FiveM resource scripts to reach host services (backend, Redis, NATS)
+      - 'host.docker.internal:host-gateway'

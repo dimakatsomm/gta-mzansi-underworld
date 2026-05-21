@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PPS Dispatch</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="dispatch-card" class="dispatch-card hidden" role="alert" aria-live="assertive">
+      <div id="severity-bar" class="severity-bar"></div>
+      <div class="card-body">
+        <div class="card-header">
+          <span class="badge" id="severity-badge">MINOR</span>
+          <span class="area" id="area-label">AREA</span>
+          <button class="close-btn" id="close-btn" aria-label="Close">✕</button>
+        </div>
+        <p class="summary" id="summary-text"></p>
+      </div>
+      <!-- Hidden audio element for voice synthesis -->
+      <audio id="dispatch-audio" preload="auto"></audio>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -5,6 +5,7 @@ import { healthzPlugin } from './healthz.js';
 import { startBridge } from './bridge/index.js';
 import { registry } from './metrics.js';
 import { registerReputationEngine } from './engines/reputation/index.js';
+import { registerDispatchEngine, initDispatchEngine } from './engines/dispatch/index.js';
 
 function parsePort(raw: string | undefined, fallback: number, name: string): number {
   if (raw === undefined || raw === '') return fallback;
@@ -48,9 +49,18 @@ async function main() {
   );
   redis.on('error', (err: Error) => console.error('[event-worker] Redis error:', err));
 
+  // Dispatch engine registration must happen before startBridge() so the
+  // worker picks up its handler immediately. The engine needs the shared
+  // EventBus (created inside startBridge) for publishing, so we register the
+  // consumer first and finish init with the bus once the bridge is up.
+  const AI_ORCHESTRATOR_URL = process.env['AI_ORCHESTRATOR_URL'] ?? 'http://localhost:3002';
+  registerDispatchEngine();
+
   // ── BullMQ bridge ─────────────────────────────────────────────────────────
   const bridge = await startBridge({ natsUrl: NATS_URL, redisUrl: REDIS_URL });
   console.log(`[event-worker] BullMQ bridge started — NATS: ${redactUrl(NATS_URL)}`);
+
+  initDispatchEngine({ redis, orchestratorUrl: AI_ORCHESTRATOR_URL, bus: bridge.bus });
 
   // ── Heartbeat ─────────────────────────────────────────────────────────────
   const heartbeat = setInterval(() => {

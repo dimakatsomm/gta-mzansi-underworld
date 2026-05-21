@@ -1,0 +1,132 @@
+/* PPS Dispatch NUI Card
+ * SA-inspired palette: deep blue-grey radio feel.
+ * Severity colors injected via JS on data receipt.
+ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: transparent;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  height: 100vh;
+  padding: 32px 40px;
+  pointer-events: none;
+}
+
+.dispatch-card {
+  background: rgba(12, 18, 28, 0.92);
+  border-radius: 8px;
+  width: 360px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+  pointer-events: all;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.dispatch-card.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(12px);
+}
+
+.severity-bar {
+  height: 4px;
+  background: #ffc107; /* default amber — overridden by JS */
+  transition: background 0.2s;
+}
+
+.card-body {
+  padding: 14px 16px 16px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: #ffc107;
+  color: #000;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.area {
+  font-size: 12px;
+  font-weight: 600;
+  color: #aab4c3;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex: 1;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #5a6a7e;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: color 0.15s;
+}
+
+.close-btn:hover {
+  color: #cdd6e0;
+}
+
+.summary {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #cdd6e0;
+}
+
+/* Severity colour overrides applied via JS data attributes */
+.dispatch-card[data-severity='petty'] .severity-bar,
+.dispatch-card[data-severity='petty'] .badge {
+  background: #6c757d;
+}
+
+.dispatch-card[data-severity='minor'] .severity-bar,
+.dispatch-card[data-severity='minor'] .badge {
+  background: #ffc107;
+}
+
+.dispatch-card[data-severity='major'] .severity-bar,
+.dispatch-card[data-severity='major'] .badge {
+  background: #fd7e14;
+}
+
+.dispatch-card[data-severity='major'] .badge {
+  color: #fff;
+}
+
+.dispatch-card[data-severity='serious'] .severity-bar,
+.dispatch-card[data-severity='serious'] .badge {
+  background: #dc3545;
+  color: #fff;
+}
+
+.dispatch-card[data-severity='capital'] .severity-bar,
+.dispatch-card[data-severity='capital'] .badge {
+  background: #6f0000;
+  color: #fff;
+}

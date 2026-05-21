@@ -39,6 +39,14 @@ export default [
     },
   },
   {
+    files: ['apps/fivem-resources/**/html/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
+    },
+  },
+  {
     ignores: ['**/dist/**', '**/.next/**', '**/.turbo/**', '**/node_modules/**', '**/coverage/**', '**/next-env.d.ts'],
   },
   prettier,
