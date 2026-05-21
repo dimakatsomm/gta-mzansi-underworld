@@ -19,6 +19,10 @@ interface WsPluginOptions extends FastifyPluginOptions {
 export async function wsRoute(app: FastifyInstance, opts: WsPluginOptions): Promise<void> {
   const { eventBus } = opts;
 
+  // Plugin-scoped: each Fastify instance (e.g. horizontally-scaled replica) gets
+  // its own client set, so fan-out only targets locally-connected FiveM servers.
+  const connectedClients = new Set<WebSocket>();
+
   // Fail fast at registration if the auth secret is missing — otherwise every
   // FiveM connection would be silently rejected with no startup signal.
   const expectedToken = process.env['FIVEM_INGEST_TOKEN'];
@@ -28,11 +32,10 @@ export async function wsRoute(app: FastifyInstance, opts: WsPluginOptions): Prom
     );
   }
 
-  // Plugin-scoped — one Set per registered route, so multiple Fastify instances
-  // (e.g. test runs in the same process) do not share state.
-  const connectedClients = new Set<WebSocket>();
-
   app.get('/ws/fivem', { websocket: true }, (socket, req) => {
+    // authorization header can be string | string[] per HTTP spec; take the
+    // first value when an array is supplied (browsers/proxies rarely send
+    // multi-value Authorization, but the type must be handled).
     const rawAuth = req.headers['authorization'];
     const authHeader = Array.isArray(rawAuth) ? rawAuth[0] : rawAuth;
     const token = authHeader?.replace(/^Bearer\s+/i, '');
@@ -58,6 +61,7 @@ export async function wsRoute(app: FastifyInstance, opts: WsPluginOptions): Prom
   });
 
   // Subscribe to NATS dispatch.requested and fan-out to all connected WS clients.
+  // Capture the subscription handle so we can drain it on server close.
   const subscription: Subscription = await eventBus.subscribe(
     'gtarp.dispatch.requested',
     async (evt) => {
