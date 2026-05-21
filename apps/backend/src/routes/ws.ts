@@ -1,14 +1,12 @@
 import { hostname } from 'node:os';
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import type { WebSocket } from '@fastify/websocket';
-import type { EventBus } from '@gtarp/event-bus';
+import type { EventBus, Subscription } from '@gtarp/event-bus';
 import type { DispatchRequested } from '@gtarp/event-schema';
 
 interface WsPluginOptions extends FastifyPluginOptions {
   eventBus: EventBus;
 }
-
-const connectedClients = new Set<WebSocket>();
 
 /**
  * WebSocket bridge for FiveM server connections.
@@ -30,8 +28,13 @@ export async function wsRoute(app: FastifyInstance, opts: WsPluginOptions): Prom
     );
   }
 
+  // Plugin-scoped — one Set per registered route, so multiple Fastify instances
+  // (e.g. test runs in the same process) do not share state.
+  const connectedClients = new Set<WebSocket>();
+
   app.get('/ws/fivem', { websocket: true }, (socket, req) => {
-    const authHeader = req.headers['authorization'];
+    const rawAuth = req.headers['authorization'];
+    const authHeader = Array.isArray(rawAuth) ? rawAuth[0] : rawAuth;
     const token = authHeader?.replace(/^Bearer\s+/i, '');
 
     if (!token || token !== expectedToken) {
@@ -55,7 +58,7 @@ export async function wsRoute(app: FastifyInstance, opts: WsPluginOptions): Prom
   });
 
   // Subscribe to NATS dispatch.requested and fan-out to all connected WS clients.
-  await eventBus.subscribe(
+  const subscription: Subscription = await eventBus.subscribe(
     'gtarp.dispatch.requested',
     async (evt) => {
       if (evt.type !== 'dispatch.requested') return;
@@ -81,6 +84,24 @@ export async function wsRoute(app: FastifyInstance, opts: WsPluginOptions): Prom
       deliverPolicy: 'new',
     },
   );
+
+  // Close the JetStream subscription and all WS clients on Fastify shutdown so
+  // the consumer is not left dangling (hot-reload, tests, graceful restart).
+  app.addHook('onClose', async () => {
+    try {
+      await subscription.close();
+    } catch (err) {
+      app.log.warn({ err }, '[ws] failed to close NATS subscription');
+    }
+    for (const client of connectedClients) {
+      try {
+        client.close(1001, 'server shutdown');
+      } catch {
+        /* socket may already be closed */
+      }
+    }
+    connectedClients.clear();
+  });
 }
 
 /** JetStream durable names allow only [A-Za-z0-9_-]. */

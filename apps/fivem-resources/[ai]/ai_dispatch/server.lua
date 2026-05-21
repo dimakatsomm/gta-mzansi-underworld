@@ -4,7 +4,8 @@
 -- and fires TriggerClientEvent to all police-job players.
 
 -- luacheck: globals exports TriggerClientEvent GetPlayers GetPlayerPed source
--- luacheck: globals GetConvar print json QBX
+-- luacheck: globals GetConvar GetCurrentResourceName print json QBX
+-- luacheck: globals AddEventHandler RegisterNetEvent WebsocketConnect SetTimeout
 
 local BACKEND_URL   = GetConvar('BACKEND_URL', 'http://localhost:3001')
 local INGEST_TOKEN  = GetConvar('FIVEM_INGEST_TOKEN', '')
@@ -19,18 +20,48 @@ local WS_URL = toWsUrl(BACKEND_URL)
 -- Set of server IDs of players currently on police job
 local policeOnDuty = {}
 
--- Track job changes
+local function isPoliceJob(jobName)
+  return jobName == 'police' or jobName == 'pps'
+end
+
+--- Populate policeOnDuty for a player by inspecting their current QBX job.
+--- Safe to call when QBCore exports aren't ready yet — it no-ops.
+local function evaluatePoliceStatus(playerId)
+  if not playerId or playerId <= 0 then return end
+  local ok, core = pcall(function() return exports['qbx_core']:GetCoreObject() end)
+  if not ok or not core then return end
+  local player = core.Functions and core.Functions.GetPlayer and core.Functions.GetPlayer(playerId)
+  local job = player and player.PlayerData and player.PlayerData.job
+  if job and isPoliceJob(job.name) then
+    policeOnDuty[playerId] = true
+  else
+    policeOnDuty[playerId] = nil
+  end
+end
+
+-- Re-evaluate police status when a player finishes loading. Already-loaded
+-- police would otherwise never appear in policeOnDuty (which is updated on
+-- SetJob only), wrongly triggering the "no police → broadcast to all" fallback.
 AddEventHandler('QBCore:Server:OnPlayerLoaded', function()
-  -- Re-evaluate on load
+  evaluatePoliceStatus(source)
 end)
 
 -- Receive job update from qbx_core
 RegisterNetEvent('QBCore:Server:SetJob', function(_, job)
   local playerId = source
-  if job and (job.name == 'police' or job.name == 'pps') then
+  if job and isPoliceJob(job.name) then
     policeOnDuty[playerId] = true
   else
     policeOnDuty[playerId] = nil
+  end
+end)
+
+-- On resource start, re-scan all currently-connected players so a hot-reload
+-- doesn't lose police-on-duty state.
+AddEventHandler('onResourceStart', function(resourceName)
+  if resourceName ~= GetCurrentResourceName() then return end
+  for _, playerId in ipairs(GetPlayers()) do
+    evaluatePoliceStatus(tonumber(playerId))
   end
 end)
 

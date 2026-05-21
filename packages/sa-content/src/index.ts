@@ -194,7 +194,7 @@ export const VEHICLE_COLORS = [
  */
 export const DISPATCH_TEMPLATES: Record<string, string> = {
   '001':
-    "Eish, all units — we've got a hijacking at Hillbrow taxi rank. Suspect fled south in a white BMW. {{slang.casual}} bra, move now!",
+    "Eish, all units — we've got a hijacking at Hillbrow taxi rank. Suspect fled south in a {{vehicle.color}} sedan. {{slang.casual}} bra, move now!",
   '002':
     'Control to all units in the kasi — robbery in progress at Yeoville corner shop. Two suspects, one armed with a firearm. {{slang.street}}, respond asap.',
   '003':
@@ -206,7 +206,7 @@ export const DISPATCH_TEMPLATES: Record<string, string> = {
   '006':
     'Drug deal spotted at the Newtown underpass — three males, one female. Unit {{name.given.m}} {{name.surname}} requesting backup before moving in. {{slang.casual}}, this one looks serious.',
   '007':
-    'Vehicle pursuit active — stolen silver Polo heading north on Louis Botha. Driver reckless, running lights. Any unit in range, cut them off at the bridge.',
+    'Vehicle pursuit active — stolen {{vehicle.color}} hatchback heading north on Louis Botha. Driver reckless, running lights. Any unit in range, cut them off at the bridge.',
   '008':
     'Code 10 at Soweto Diepkloof — domestic dispute turned violent. Neighbours called it in. Tread soft, {{slang.street}}, there are kids inside.',
   '009':

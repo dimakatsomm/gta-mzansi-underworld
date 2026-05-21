@@ -22,14 +22,20 @@ math.randomseed(os.time() + GetGameTimer())
 for _ = 1, 8 do math.random() end
 
 --- Generate a UUID v4 string. Relies on math.random being seeded once at load.
+--- The trailing 12-hex segment needs 48 bits of entropy; Lua 5.4's math.random
+--- supports the full range, but we split into two 24-bit calls so the function
+--- also works on runtimes that cap at 2^53.
 local function uuid4()
+  local lo24 = math.random(0, 0xFFFFFF)
+  local hi24 = math.random(0, 0xFFFFFF)
   return string.format(
-    '%08x-%04x-4%03x-%04x-%012x',
+    '%08x-%04x-4%03x-%04x-%06x%06x',
     math.random(0, 0xFFFFFFFF),
     math.random(0, 0xFFFF),
     math.random(0, 0x0FFF),
     math.random(0x8000, 0xBFFF),
-    math.random(0, 0xFFFFFFFF)
+    hi24,
+    lo24
   )
 end
 

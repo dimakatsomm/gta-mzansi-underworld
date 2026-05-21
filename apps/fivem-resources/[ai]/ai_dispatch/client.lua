@@ -64,9 +64,10 @@ end)
 
 -- /dispatch — client-side mute toggle for the local player. This is a personal
 -- preference (e.g. silencing chatter while filming) and is NOT a permission
--- gate: incident events are already filtered server-side via the police-job
--- broadcast list in ai_dispatch/server.lua, so non-police players don't
--- receive them in the first place.
+-- gate. Server-side, incidents are broadcast to police-job players; when no
+-- police are on duty the server falls back to broadcasting to all players
+-- (solo-testing convenience), so any client can still receive incidents in
+-- that case — this toggle silences them locally regardless of job.
 RegisterCommand('dispatch', function()
   isMuted = not isMuted
   lib.notify({
