@@ -61,10 +61,12 @@ local pharas = {}
 local targetCount = {}
 -- activeDialogue[pedNetId] = { lines = [...], idx, until = gameTimerMs }
 local activeDialogue = {}
+local modelLoadFailures = {}
 
 local SPAWN_RADIUS   = 300.0  -- request density for clusters within this range
 local SUBTITLE_RANGE = 6.0    -- show subtitle when player within this range
 local SUBTITLE_CYCLE = 8000   -- ms between dialogue line advances
+local MODEL_LOAD_TIMEOUT = 5000 -- ms
 
 -- ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -76,11 +78,43 @@ local function loadModel(modelName)
   local hash = GetHashKey(modelName)
   RequestModel(hash)
   local t = 0
-  while not HasModelLoaded(hash) and t < 100 do
+  while not HasModelLoaded(hash) and t < MODEL_LOAD_TIMEOUT do
     Citizen.Wait(50)
     t = t + 50
   end
+  if not HasModelLoaded(hash) then
+    if not modelLoadFailures[modelName] then
+      modelLoadFailures[modelName] = 1
+      print(('[pharas] model load timeout model=%s waited=%dms'):format(modelName, t))
+    else
+      modelLoadFailures[modelName] = modelLoadFailures[modelName] + 1
+    end
+  end
   return hash
+end
+
+local function getPedNetId(ped)
+  local netId = NetworkGetNetworkIdFromEntity(ped)
+  if type(netId) ~= 'number' or netId == 0 then
+    return nil
+  end
+  return netId
+end
+
+local function reportActivity(entry, activityType, pedPos, extra)
+  local netId = getPedNetId(entry.ped)
+  if not netId then return end
+
+  local payload = {
+    activityType = activityType,
+    pharaRef     = tostring(netId),
+    area         = entry.area,
+    x = pedPos.x, y = pedPos.y, z = pedPos.z,
+  }
+  if extra then
+    for k, v in pairs(extra) do payload[k] = v end
+  end
+  TriggerServerEvent('pharas:reportActivity', payload)
 end
 
 -- ── Spawn / despawn ───────────────────────────────────────────────────────────
@@ -95,7 +129,7 @@ local function spawnPhara(cluster)
   local y = cluster.y + math.random() * jitter * 2 - jitter
   local z = cluster.z
 
-  local ped = CreatePed(4, hash, x, y, z, math.random(0, 359), false, true)
+  local ped = CreatePed(4, hash, x, y, z, math.random(0, 359), true, true)
   SetModelAsNoLongerNeeded(hash)
 
   if not ped or ped == 0 then return nil end
@@ -224,34 +258,20 @@ Citizen.CreateThread(function()
         -- Overdose roll (2% per tick ≈ once per ~250 s on average)
         if math.random() < 0.02 then
           entry.dialogueKey = 'incoherent'
-          TriggerServerEvent('pharas:reportActivity', {
-            activityType = 'overdose',
-            pharaRef     = tostring(NetworkGetNetworkIdFromEntity(entry.ped)),
-            area         = entry.area,
-            x = pedPos.x, y = pedPos.y, z = pedPos.z,
-          })
+          reportActivity(entry, 'overdose', pedPos)
         end
 
         -- Harassment roll when player within 15 m (8% per tick)
         if dist < 15.0 and math.random() < 0.08 then
           entry.dialogueKey = 'aggressive'
-          TriggerServerEvent('pharas:reportActivity', {
-            activityType = 'harassment',
-            pharaRef     = tostring(NetworkGetNetworkIdFromEntity(entry.ped)),
-            area         = entry.area,
-            x = pedPos.x, y = pedPos.y, z = pedPos.z,
-          })
+          reportActivity(entry, 'harassment', pedPos)
         end
 
         -- Mugging trigger when player within 2 m
         if dist < 2.0 then
           entry.dialogueKey = 'aggressive'
-          TriggerServerEvent('pharas:reportActivity', {
-            activityType = 'mugging',
-            pharaRef     = tostring(NetworkGetNetworkIdFromEntity(entry.ped)),
-            area         = entry.area,
-            victimNetId  = NetworkGetNetworkIdFromEntity(playerPed),
-            x = pedPos.x, y = pedPos.y, z = pedPos.z,
+          reportActivity(entry, 'mugging', pedPos, {
+            victimNetId = NetworkGetNetworkIdFromEntity(playerPed),
           })
         end
 
@@ -279,6 +299,9 @@ Citizen.CreateThread(function()
 
         if dist < SUBTITLE_RANGE then
           local netId = NetworkGetNetworkIdFromEntity(entry.ped)
+          if not netId or netId == 0 then
+            netId = entry.ped
+          end
           local ad    = activeDialogue[netId]
 
           -- Initialise or advance dialogue line
@@ -299,7 +322,11 @@ Citizen.CreateThread(function()
             { font = 4, scale = 0.35, colour = { 255, 220, 120, 220 } }
           )
         else
-          activeDialogue[NetworkGetNetworkIdFromEntity(entry.ped)] = nil
+          local netId = NetworkGetNetworkIdFromEntity(entry.ped)
+          if not netId or netId == 0 then
+            netId = entry.ped
+          end
+          activeDialogue[netId] = nil
         end
 
         ::continue::

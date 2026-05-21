@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { Redis } from 'ioredis';
 import type { WitnessObserved, DomainEvent, PharaActivity } from '@gtarp/event-schema';
 import type { EventBus } from '@gtarp/event-bus';
@@ -38,6 +38,12 @@ function strHash(s: string): number {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
   return h;
+}
+
+function buildPharaWitnessId(pharaRef: string, activityId: string): string {
+  const base = pharaRef.trim().length > 0 ? pharaRef : activityId;
+  const digest = createHash('sha256').update(base).digest('hex').slice(0, 12);
+  return `phara-${digest}`;
 }
 
 /**
@@ -178,7 +184,7 @@ async function handlePharaActivity(evt: PharaActivity): Promise<void> {
   if (activityType !== 'mugging' && activityType !== 'dealing_proximity') return;
 
   const { bus } = _deps;
-  const witnessId = `phara-${pharaRef.replace(/[^a-z0-9]/gi, '')}`;
+  const witnessId = buildPharaWitnessId(pharaRef, activityId);
 
   // mugging=0.12 (below 0.15 willing threshold — present but useless as witness)
   // dealing_proximity=0.18 (marginally above, but intoxication penalty reduces effective reliability to ~0)

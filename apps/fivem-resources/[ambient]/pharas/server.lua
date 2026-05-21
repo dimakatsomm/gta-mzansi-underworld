@@ -2,7 +2,7 @@
 -- Density query, activity event publish, and drug-deal fanout for ambient pharas.
 
 -- luacheck: globals exports TriggerClientEvent RegisterNetEvent AddEventHandler
--- luacheck: globals source GetPlayers GetGameTimer GetEntityCoords
+-- luacheck: globals source GetPlayers GetGameTimer GetEntityCoords GetPlayerPed vector3
 -- luacheck: globals PerformHttpRequest json math table string os GetConvar
 -- luacheck: globals GetCurrentResourceName Citizen NetworkGetEntityFromNetworkId
 
@@ -12,6 +12,28 @@ local INGEST_TOKEN = GetConvar('FIVEM_INGEST_TOKEN', '')
 -- Cooldown tracking: pharaRef -> { lastReport = gameTimerMs }
 local activityCooldowns = {}
 local COOLDOWN_MS       = 15 * 1000  -- 15 s per pharaRef
+local playerCooldowns   = {}
+local PLAYER_COOLDOWN_MS = 6 * 1000  -- 6 s per player
+
+local DENSITY_CACHE_MS  = 20 * 1000
+local densityCache      = {} -- area -> { score, expiresAt }
+
+local AREA_PROVINCE = {
+  hillbrow         = 'GP',
+  yeoville         = 'GP',
+  alexandra        = 'GP',
+  soweto_diepkloof = 'GP',
+  cbd              = 'GP',
+  default          = 'GP',
+}
+
+local ALLOWED_AREAS = {
+  hillbrow         = true,
+  yeoville         = true,
+  alexandra        = true,
+  soweto_diepkloof = true,
+  cbd              = true,
+}
 
 local ALLOWED_TYPES = {
   mugging          = true,
@@ -24,6 +46,16 @@ local ALLOWED_TYPES = {
 
 local function isFiniteNumber(v)
   return type(v) == 'number' and v == v and v ~= math.huge and v ~= -math.huge
+end
+
+local function checkCooldown(store, key, windowMs)
+  local now = GetGameTimer()
+  local last = store[key] or 0
+  if now - last < windowMs then
+    return false
+  end
+  store[key] = now
+  return true
 end
 
 local function uuid4()
@@ -54,8 +86,16 @@ end
 RegisterNetEvent('pharas:getDensity', function(area)
   local playerId = source
   if type(area) ~= 'string' or #area == 0 then return end
+  if not ALLOWED_AREAS[area] then return end
 
   local url = BACKEND_URL .. '/reputation?area=' .. area .. '&axis=criminal'
+
+  local cached = densityCache[area]
+  local now = GetGameTimer()
+  if cached and cached.expiresAt and cached.expiresAt > now then
+    TriggerClientEvent('pharas:densityResponse', playerId, area, repToCount(cached.score))
+    return
+  end
 
   PerformHttpRequest(url, function(statusCode, body, _)
     local score = 0
@@ -65,6 +105,7 @@ RegisterNetEvent('pharas:getDensity', function(area)
         score = decoded.score
       end
     end
+    densityCache[area] = { score = score, expiresAt = GetGameTimer() + DENSITY_CACHE_MS }
     TriggerClientEvent('pharas:densityResponse', playerId, area, repToCount(score))
   end, 'GET', '', { ['x-fivem-ingest-token'] = INGEST_TOKEN })
 end)
@@ -77,16 +118,28 @@ RegisterNetEvent('pharas:reportActivity', function(data)
   if type(data.activityType) ~= 'string'            then return end
   if not ALLOWED_TYPES[data.activityType]           then return end
   if type(data.pharaRef) ~= 'string' or #data.pharaRef == 0 then return end
+  local pharaRefNum = tonumber(data.pharaRef)
+  if pharaRefNum and pharaRefNum <= 0 then return end
   if not isFiniteNumber(data.x)                     then return end
   if not isFiniteNumber(data.y)                     then return end
   if not isFiniteNumber(data.z)                     then return end
   if type(data.area) ~= 'string' or #data.area == 0 then return end
+  if not ALLOWED_AREAS[data.area]                   then return end
+
+  -- Per-player cooldown to reduce spam from modified clients
+  if not checkCooldown(playerCooldowns, playerId, PLAYER_COOLDOWN_MS) then return end
+
+  -- Validate reported coords are near the reporting player's ped
+  local ped = GetPlayerPed(playerId)
+  local pedCoords = GetEntityCoords(ped)
+  local reported = vector3(data.x, data.y, data.z)
+  if #(pedCoords - reported) > 25.0 then
+    print(('[pharas] rejected player %d — report too far from ped'):format(playerId))
+    return
+  end
 
   -- Per-pharaRef cooldown
-  local now = GetGameTimer()
-  local last = activityCooldowns[data.pharaRef]
-  if last and (now - last) < COOLDOWN_MS then return end
-  activityCooldowns[data.pharaRef] = now
+  if not checkCooldown(activityCooldowns, data.pharaRef, COOLDOWN_MS) then return end
 
   -- Resolve optional victim from net ID
   local victimId = nil
@@ -100,6 +153,7 @@ RegisterNetEvent('pharas:reportActivity', function(data)
   local eventId  = uuid4()
   local actId    = uuid4()
   local now_str  = os.date('!%Y-%m-%dT%H:%M:%SZ')
+  local province = AREA_PROVINCE[data.area] or AREA_PROVINCE.default
 
   local payload = {
     id         = eventId,
@@ -110,7 +164,13 @@ RegisterNetEvent('pharas:reportActivity', function(data)
       activityId   = actId,
       activityType = data.activityType,
       pharaRef     = data.pharaRef,
-      location     = { area = data.area, x = data.x, y = data.y, z = data.z },
+      location     = {
+        area     = data.area,
+        x        = data.x,
+        y        = data.y,
+        z        = data.z,
+        province = province,
+      },
       victimId     = victimId,
     },
   }
@@ -133,6 +193,7 @@ RegisterNetEvent('pharas:reportActivity', function(data)
     {
       ['Content-Type']         = 'application/json',
       ['x-fivem-ingest-token'] = INGEST_TOKEN,
+      ['x-source-id']          = tostring(playerId),
     }
   )
 end)
@@ -145,6 +206,8 @@ RegisterNetEvent('ai_witness:crimePublished', function(crimeId, crimeData)
   if source ~= 0 then return end  -- server-side only
   if type(crimeData) ~= 'table'  then return end
   if not isFiniteNumber(crimeData.x) then return end
+  if not isFiniteNumber(crimeData.y) then return end
+  if not isFiniteNumber(crimeData.z) then return end
 
   local fanout = { x = crimeData.x, y = crimeData.y, z = crimeData.z }
   for _, pid in ipairs(GetPlayers()) do
@@ -160,9 +223,19 @@ AddEventHandler('onResourceStart', function(resourceName)
   Citizen.CreateThread(function()
     while true do
       Citizen.Wait(5 * 60 * 1000)
-      local cutoff = GetGameTimer() - COOLDOWN_MS
+      local now = GetGameTimer()
+      local cutoff = now - COOLDOWN_MS
       for ref, ts in pairs(activityCooldowns) do
         if ts < cutoff then activityCooldowns[ref] = nil end
+      end
+      local playerCutoff = now - PLAYER_COOLDOWN_MS
+      for playerId, ts in pairs(playerCooldowns) do
+        if ts < playerCutoff then playerCooldowns[playerId] = nil end
+      end
+      for area, cached in pairs(densityCache) do
+        if not cached.expiresAt or cached.expiresAt < now then
+          densityCache[area] = nil
+        end
       end
     end
   end)

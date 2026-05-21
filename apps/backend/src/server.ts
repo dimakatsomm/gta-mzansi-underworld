@@ -9,6 +9,7 @@ import { healthzRoute } from './routes/healthz.js';
 import { eventsRoute } from './routes/events.js';
 import { wsRoute } from './routes/ws.js';
 import { policeRoute } from './routes/police.js';
+import { reputationRoute } from './routes/reputation.js';
 
 export interface BuildServerOptions {
   prisma?: PrismaClient;
@@ -32,6 +33,7 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<Fastif
     await app.register(eventsRoute, { prisma: opts.prisma, eventBus: opts.eventBus });
   }
   if (opts.prisma) {
+    await app.register(reputationRoute, { prisma: opts.prisma });
     await app.register(policeRoute, { prisma: opts.prisma });
   }
   if (opts.eventBus) {
