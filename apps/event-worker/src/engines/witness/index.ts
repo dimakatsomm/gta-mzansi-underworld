@@ -1,6 +1,6 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { Redis } from 'ioredis';
-import type { WitnessObserved, DomainEvent } from '@gtarp/event-schema';
+import type { WitnessObserved, DomainEvent, PharaActivity } from '@gtarp/event-schema';
 import type { EventBus } from '@gtarp/event-bus';
 import type { Job } from 'bullmq';
 import { registerConsumer, type ConsumerRegistration } from '../../bridge/registry.js';
@@ -38,6 +38,12 @@ function strHash(s: string): number {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
   return h;
+}
+
+function buildPharaWitnessId(pharaRef: string, activityId: string): string {
+  const base = pharaRef.trim().length > 0 ? pharaRef : activityId;
+  const digest = createHash('sha256').update(base).digest('hex').slice(0, 12);
+  return `phara-${digest}`;
 }
 
 /**
@@ -162,12 +168,62 @@ async function handleWitnessObserved(evt: WitnessObserved): Promise<void> {
 
 export { handleWitnessObserved };
 
+/**
+ * Inject a low-quality `witness.observed` event when a phara reports a mugging
+ * or dealing_proximity activity. Pharas are always intoxicated, so quality is
+ * below the willing threshold — they contribute noise rather than actionable
+ * testimony, which is intentional.
+ */
+async function handlePharaActivity(evt: PharaActivity): Promise<void> {
+  if (!_deps) {
+    console.warn('[witness] engine not initialised — skipping phara injection');
+    return;
+  }
+  const { activityType, pharaRef, activityId } = evt.data;
+  // Only inject for activities where the phara directly observed a crime scene.
+  if (activityType !== 'mugging' && activityType !== 'dealing_proximity') return;
+
+  const { bus } = _deps;
+  const witnessId = buildPharaWitnessId(pharaRef, activityId);
+
+  // mugging=0.12 (below 0.15 willing threshold — present but useless as witness)
+  // dealing_proximity=0.18 (marginally above, but intoxication penalty reduces effective reliability to ~0)
+  const quality = activityType === 'mugging' ? 0.12 : 0.18;
+
+  await bus.publish({
+    id: randomUUID(),
+    type: 'witness.observed',
+    version: 1,
+    occurredAt: new Date().toISOString(),
+    correlationId: evt.id,
+    data: {
+      crimeId: activityId,
+      witnessId: witnessId,
+      quality: quality,
+      factors: {
+        lighting: 0.5,
+        distance: 1.5,
+        fear: 0.6,
+        intimidated: false,
+        intoxicated: true,
+        relationshipToSuspect: 'stranger',
+      },
+    },
+  });
+  console.log(
+    `[witness] injected phara witness.observed activityType=${activityType} pharaRef=${pharaRef}`,
+  );
+}
+
 export const witnessConsumer: ConsumerRegistration = {
   name: 'witness',
-  subjects: ['gtarp.witness.observed'],
+  subjects: ['gtarp.witness.observed', 'gtarp.phara.activity'],
   handler: async (job: Job<DomainEvent>) => {
-    if (job.data.type !== 'witness.observed') return;
-    await handleWitnessObserved(job.data as WitnessObserved);
+    if (job.data.type === 'witness.observed') {
+      await handleWitnessObserved(job.data as WitnessObserved);
+    } else if (job.data.type === 'phara.activity') {
+      await handlePharaActivity(job.data as PharaActivity);
+    }
   },
 };
 

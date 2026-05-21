@@ -24,6 +24,23 @@ function crimeEvent(overrides: Partial<DomainEvent['data'] & object> = {}): Doma
   } as DomainEvent;
 }
 
+function pharaEvent(
+  activityType: 'mugging' | 'overdose' | 'harassment' | 'dealing_proximity',
+): DomainEvent {
+  return {
+    id: 'evt-phara-1',
+    type: 'phara.activity',
+    version: 1,
+    occurredAt: '2026-01-01T00:00:00Z',
+    data: {
+      activityId: 'activity-1',
+      activityType,
+      pharaRef: 'phara-123',
+      location: { x: 0, y: 0, z: 0, province: 'GP', area: 'Hillbrow' },
+    },
+  } as DomainEvent;
+}
+
 // ── crime.committed ───────────────────────────────────────────────────────────
 
 describe('scoreEvent — crime.committed', () => {
@@ -186,6 +203,48 @@ describe('scoreEvent — business.robbed', () => {
     const deltas = scoreEvent(robbedEvent(100_000));
     expect(deltas).toHaveLength(1);
     expect(deltas[0]).toMatchObject({ axis: 'stability', delta: -10 });
+  });
+});
+
+// ── phara.activity ─────────────────────────────────────────────────────────────
+
+describe('scoreEvent — phara.activity', () => {
+  it('mugging: -4 safety, +2 criminal', () => {
+    const deltas = scoreEvent(pharaEvent('mugging'));
+    expect(deltas).toContainEqual<ReputationDelta>({ area: 'Hillbrow', axis: 'safety', delta: -4 });
+    expect(deltas).toContainEqual<ReputationDelta>({
+      area: 'Hillbrow',
+      axis: 'criminal',
+      delta: 2,
+    });
+    expect(deltas).toHaveLength(2);
+  });
+
+  it('overdose: -3 safety, -2 stability', () => {
+    const deltas = scoreEvent(pharaEvent('overdose'));
+    expect(deltas).toContainEqual<ReputationDelta>({ area: 'Hillbrow', axis: 'safety', delta: -3 });
+    expect(deltas).toContainEqual<ReputationDelta>({
+      area: 'Hillbrow',
+      axis: 'stability',
+      delta: -2,
+    });
+    expect(deltas).toHaveLength(2);
+  });
+
+  it('harassment: -1 safety', () => {
+    const deltas = scoreEvent(pharaEvent('harassment'));
+    expect(deltas).toContainEqual<ReputationDelta>({ area: 'Hillbrow', axis: 'safety', delta: -1 });
+    expect(deltas).toHaveLength(1);
+  });
+
+  it('dealing_proximity: +1 criminal', () => {
+    const deltas = scoreEvent(pharaEvent('dealing_proximity'));
+    expect(deltas).toContainEqual<ReputationDelta>({
+      area: 'Hillbrow',
+      axis: 'criminal',
+      delta: 1,
+    });
+    expect(deltas).toHaveLength(1);
   });
 });
 
