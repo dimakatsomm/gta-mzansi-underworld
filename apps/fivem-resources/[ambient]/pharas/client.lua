@@ -10,6 +10,7 @@
 -- luacheck: globals GetClockHours DrawText SetTextScale SetTextFont SetTextColour
 -- luacheck: globals SetTextEntry SetTextCentre SetTextOutline AddTextComponentString
 -- luacheck: globals DrawText3D N_0x25fbb336 table string math type
+-- luacheck: globals GetHashKey RequestModel HasModelLoaded SetModelAsNoLongerNeeded
 
 -- ── Territory clusters ────────────────────────────────────────────────────────
 
@@ -171,8 +172,6 @@ RegisterNetEvent('pharas:drugDealNearby', function(coords)
   local tz = tonumber(coords.z)
   if not tx or not ty or not tz then return end
 
-  local playerPos = GetEntityCoords(PlayerPedId())
-
   for _, list in pairs(pharas) do
     for _, entry in ipairs(list) do
       if entry.ped and entry.ped ~= 0 and not IsPedDeadOrDying(entry.ped, true) then
@@ -245,7 +244,6 @@ Citizen.CreateThread(function()
     Citizen.Wait(5000)
     local playerPed = PlayerPedId()
     local playerPos = GetEntityCoords(playerPed)
-    local now       = GetGameTimer()
 
     for _, list in pairs(pharas) do
       for _, entry in ipairs(list) do
