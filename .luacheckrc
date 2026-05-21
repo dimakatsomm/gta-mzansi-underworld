@@ -65,6 +65,15 @@ read_globals = {
   "GetEntityHealth",
   "SetEntityHealth",
 
+  -- Input / controls
+  "IsControlJustReleased",
+  "IsControlJustPressed",
+  "IsControlPressed",
+  "DisableControlAction",
+  "EnableControlAction",
+  "IsDisabledControlJustPressed",
+  "IsDisabledControlJustReleased",
+
   -- Vehicle
   "GetVehiclePedIsIn",
   "GetClosestVehicle",
