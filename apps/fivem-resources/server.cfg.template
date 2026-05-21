@@ -40,4 +40,5 @@ ensure qbx_core
 
 # ── Custom resources ─────────────────────────────────────────────────────────
 ensure [crime]/robbery
+ensure [crime]/hijack
 ensure [ai]/ai_dispatch
