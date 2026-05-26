@@ -1,6 +1,6 @@
 # GitHub Repo Settings
 
-Target: `dimakatsomm/GTA-RP`. Apply once. Re-apply on major workflow changes.
+Target: `dimakatsomm/gta-mzansi-underworld`. Apply once. Re-apply on major workflow changes.
 
 ## Branch protection — `main`
 
@@ -111,7 +111,7 @@ Already in repo: `.github/ISSUE_TEMPLATE/copilot-task.md`, `.github/pull_request
 If `gh` authenticated as a repo admin:
 
 ```powershell
-$REPO = "dimakatsomm/GTA-RP"
+$REPO = "dimakatsomm/gta-mzansi-underworld"
 
 # Default branch + delete-branch-on-merge + squash-only
 gh repo edit $REPO `

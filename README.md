@@ -1,4 +1,4 @@
-# GTA RP — AI-Powered South African Roleplay Server
+# Mzansi Underworld — AI-Powered South African Roleplay Server
 
 > First truly living AI-powered criminal society simulator. FiveM + QBox, themed on Joburg / Pretoria / Cape Town / Durban.
 

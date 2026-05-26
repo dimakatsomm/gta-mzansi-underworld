@@ -3,7 +3,7 @@ game 'gta5'
 
 name        'hijack'
 description 'Vehicle hijack crime — publishes crime.committed (hijack) via backend /events'
-author      'GTA-RP Team'
+author      'Mzansi Underworld Team'
 version     '1.0.0'
 
 shared_scripts {

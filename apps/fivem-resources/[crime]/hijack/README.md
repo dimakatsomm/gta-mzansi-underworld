@@ -1,6 +1,6 @@
 # `[crime]/hijack`
 
-Vehicle hijack resource for GTA-RP. Client detects nearby slow/parked vehicles; server validates distance, applies a 45-second cooldown, and publishes a typed `crime.committed` event (`crimeType: "hijack"`, `severity: "major"`) to the backend `/events` endpoint.
+Vehicle hijack resource for Mzansi Underworld. Client detects nearby slow/parked vehicles; server validates distance, applies a 45-second cooldown, and publishes a typed `crime.committed` event (`crimeType: "hijack"`, `severity: "major"`) to the backend `/events` endpoint.
 
 ## Dependencies
 

@@ -3,8 +3,8 @@
 # Never commit server.cfg — only server.cfg.template is tracked.
 
 # ── Identity ─────────────────────────────────────────────────────────────────
-sv_projectName "Mzansi Underworld RP — Development"
-sv_projectDesc "AI-powered South African GTA RP. Phase 1 internal."
+sv_projectName "Mzansi Underworld — Development"
+sv_projectDesc "AI-powered South African Mzansi Underworld. Phase 1 internal."
 sv_maxClients 32
 
 # ── Licence ──────────────────────────────────────────────────────────────────
