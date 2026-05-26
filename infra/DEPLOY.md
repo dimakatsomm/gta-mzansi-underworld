@@ -30,7 +30,7 @@ npm install -g pm2
 ## 2. Clone & Configure
 
 ```bash
-git clone https://github.com/your-org/gta-mzansi-underworld.git /opt/gta-mzansi-underworld
+git clone https://github.com/dimakatsomm/gta-mzansi-underworld.git /opt/gta-mzansi-underworld
 cd /opt/gta-mzansi-underworld
 
 # Copy and fill in the production env file

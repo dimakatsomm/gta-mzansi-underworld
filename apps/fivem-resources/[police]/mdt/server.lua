@@ -25,10 +25,12 @@ local function uuid4()
 end
 
 local function deriveArea(x, y)
-  if x > 200 and y > 200   then return 'yeoville', 'GP' end
-  if x > 100 and y < 0     then return 'hillbrow', 'GP' end
-  if x < -200               then return 'soweto', 'GP'   end
-  if x > 400 and y < -500   then return 'sandton', 'GP'  end
+  if y < -2500                   then return 'cape_town', 'WC' end
+  if x > 3000 and y > 1500       then return 'durban', 'KZN'  end
+  if x > 200 and y > 200         then return 'yeoville', 'GP' end
+  if x > 100 and y < 0           then return 'hillbrow', 'GP' end
+  if x < -200                    then return 'soweto', 'GP'   end
+  if x > 400 and y < -500        then return 'sandton', 'GP'  end
   return 'cbd', 'GP'
 end
 
@@ -155,6 +157,12 @@ local arrestLastAt = {}           -- officerId → GetGameTimer()
 
 RegisterNetEvent('mdt:makeArrest', function(data)
   local officerId = source
+
+  if INGEST_TOKEN == '' then
+    print('[INGEST] ERROR: FIVEM_INGEST_TOKEN not set, ingest disabled')
+    TriggerClientEvent('mdt:arrestLogged', officerId, false, 'Ingest not configured.')
+    return
+  end
 
   local now = GetGameTimer()
   if arrestLastAt[officerId] and (now - arrestLastAt[officerId]) < ARREST_COOLDOWN_MS then

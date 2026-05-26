@@ -79,11 +79,15 @@ Citizen.CreateThread(function()
     while true do
         Citizen.Wait(REPORT_TIMEOUT_MS)
         local now = GetGameTimer()
+        local toRemove = {}
         for playerId, pd in pairs(playerData) do
             if now - pd.lastReportAt > REPORT_TIMEOUT_MS then
                 kickPlayer(playerId, 'report timeout (client stopped sending)')
-                playerData[playerId] = nil
+                table.insert(toRemove, playerId)
             end
+        end
+        for _, id in ipairs(toRemove) do
+            playerData[id] = nil
         end
     end
 end)

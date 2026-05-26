@@ -244,7 +244,7 @@ export const NEWS_HEADLINE_TEMPLATES: Record<string, string> = {
   '003':
     'Breaking from the streets: Gang war erupts in Yeoville — residents urged to stay indoors as police flood the area',
   '004':
-    'SAPS Quarterly Stats: Crime down 4% in Sandton, up 12% in townships — community leaders call for urgent action',
+    'PPS Quarterly Stats: Crime down 4% in Sandton, up 12% in townships — community leaders call for urgent action',
   '005':
     "eGoli Politics: Deputy Mayor {{name.given.m}} {{name.surname}} faces corruption charges — denies all allegations, says {{slang.casual}}, it's politically motivated",
 };
