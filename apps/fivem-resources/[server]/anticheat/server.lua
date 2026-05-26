@@ -3,7 +3,7 @@
 -- All enforcement is server-side; the client report is the only untrusted input.
 
 -- luacheck: globals RegisterNetEvent AddEventHandler DropPlayer GetPlayerName
--- luacheck: globals GetGameTimer source print json math type
+-- luacheck: globals GetGameTimer source print json math type Citizen
 
 local TELEPORT_THRESHOLD = 500.0   -- metres between consecutive 2s reports → kick
 local MAX_HEALTH         = 201     -- FiveM health ceiling is 200; anything above is godmode
@@ -86,6 +86,16 @@ Citizen.CreateThread(function()
             end
         end
     end
+end)
+
+-- Enrol every connecting player so the watchdog can kick those who never send
+-- a report (e.g. a modified client that skips running client.lua).
+AddEventHandler('playerConnecting', function(_, _, deferrals)
+    deferrals.defer()
+    Citizen.Wait(0)
+    local playerId = source
+    playerData[playerId] = { x = 0, y = 0, z = 0, lastReportAt = GetGameTimer() }
+    deferrals.done()
 end)
 
 AddEventHandler('playerDropped', function()

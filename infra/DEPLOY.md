@@ -41,6 +41,7 @@ nano infra/docker/.env.production
 **Secrets that must be changed before starting:**
 
 - `POSTGRES_PASSWORD` — generate with `openssl rand -base64 32`
+- `NATS_AUTH_TOKEN` — generate with `openssl rand -hex 16`; also update `NATS_URL` to embed it (`nats://<token>@127.0.0.1:4222`)
 - `FIVEM_INGEST_TOKEN` — generate with `openssl rand -hex 16`
 - `SV_LICENCEKEY` — from [keymaster.fivem.net](https://keymaster.fivem.net)
 - All `DISCORD_*` values — from your Discord developer portal

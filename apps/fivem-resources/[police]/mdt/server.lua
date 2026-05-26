@@ -14,11 +14,13 @@ math.randomseed(os.time() + GetGameTimer())
 for _ = 1, 8 do math.random() end
 
 local function uuid4()
+  -- Last group needs 12 hex chars (48 bits). Split into 8+4 to stay within
+  -- math.random's integer range and avoid float precision truncation.
   return string.format(
-    '%08x-%04x-4%03x-%04x-%012x',
+    '%08x-%04x-4%03x-%04x-%08x%04x',
     math.random(0, 0xFFFFFFFF), math.random(0, 0xFFFF),
     math.random(0, 0x0FFF), math.random(0x8000, 0xBFFF),
-    math.random(0, 0xFFFFFFFF)
+    math.random(0, 0xFFFFFFFF), math.random(0, 0xFFFF)
   )
 end
 
@@ -148,8 +150,17 @@ local VALID_CHARGES = {
   money_laundering=true, corruption_bribe=true,
 }
 
+local ARREST_COOLDOWN_MS = 10000  -- 10s between arrests per officer
+local arrestLastAt = {}           -- officerId → GetGameTimer()
+
 RegisterNetEvent('mdt:makeArrest', function(data)
   local officerId = source
+
+  local now = GetGameTimer()
+  if arrestLastAt[officerId] and (now - arrestLastAt[officerId]) < ARREST_COOLDOWN_MS then
+    TriggerClientEvent('mdt:arrestLogged', officerId, false, 'Cooldown — wait before logging another arrest.')
+    return
+  end
 
   local player = QBX and QBX.Functions and QBX.Functions.GetPlayer(officerId)
   if not player then
@@ -233,6 +244,8 @@ RegisterNetEvent('mdt:makeArrest', function(data)
     },
   }
 
+  arrestLastAt[officerId] = GetGameTimer()
+
   PerformHttpRequest(
     BACKEND_URL .. '/events',
     function(statusCode, _, _headers)
@@ -247,4 +260,8 @@ RegisterNetEvent('mdt:makeArrest', function(data)
       ['x-source-id']          = tostring(officerId),
     }
   )
+end)
+
+AddEventHandler('playerDropped', function()
+  arrestLastAt[source] = nil
 end)

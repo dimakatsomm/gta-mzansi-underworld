@@ -43,12 +43,16 @@ services:
   nats:
     image: nats:2.10-alpine
     restart: always
-    command: ['-js', '-sd', '/data', '-m', '8222']
+    # Config file enables token auth; -c overrides the default flag-only startup.
+    command: ['-c', '/etc/nats/nats.conf']
+    environment:
+      NATS_AUTH_TOKEN: ${NATS_AUTH_TOKEN:?NATS_AUTH_TOKEN required}
     ports:
       - '0.0.0.0:4222:4222' # FiveM server connects from outside Docker
       - '127.0.0.1:8222:8222' # monitoring — localhost only
     volumes:
       - nats_data_prod:/data
+      - ./nats.production.conf:/etc/nats/nats.conf:ro
     deploy:
       resources:
         limits:

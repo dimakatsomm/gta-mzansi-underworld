@@ -14,17 +14,36 @@ interface ModelPricing {
 }
 
 const MODEL_PRICING: Record<string, ModelPricing> = {
-  'claude-haiku-4-5-20251001': { inputPerM: 0.25, outputPerM: 1.25, cacheReadPerM: 0.03, cacheWritePerM: 0.30 },
-  'claude-sonnet-4-6':        { inputPerM: 3.00, outputPerM: 15.00, cacheReadPerM: 0.30, cacheWritePerM: 3.75 },
-  'claude-opus-4-7':          { inputPerM: 15.00, outputPerM: 75.00, cacheReadPerM: 1.50, cacheWritePerM: 18.75 },
+  'claude-haiku-4-5-20251001': {
+    inputPerM: 0.25,
+    outputPerM: 1.25,
+    cacheReadPerM: 0.03,
+    cacheWritePerM: 0.3,
+  },
+  'claude-sonnet-4-6': {
+    inputPerM: 3.0,
+    outputPerM: 15.0,
+    cacheReadPerM: 0.3,
+    cacheWritePerM: 3.75,
+  },
+  'claude-opus-4-7': {
+    inputPerM: 15.0,
+    outputPerM: 75.0,
+    cacheReadPerM: 1.5,
+    cacheWritePerM: 18.75,
+  },
 };
 
 function resolveModel(tier: GenerationRequest['tier']): string {
   switch (tier) {
-    case 0: return 'claude-haiku-4-5-20251001';
-    case 1: return 'claude-haiku-4-5-20251001';
-    case 2: return 'claude-sonnet-4-6';
-    case 3: return 'claude-opus-4-7';
+    case 0:
+      return 'claude-haiku-4-5-20251001';
+    case 1:
+      return 'claude-haiku-4-5-20251001';
+    case 2:
+      return 'claude-sonnet-4-6';
+    case 3:
+      return 'claude-opus-4-7';
   }
 }
 
@@ -62,15 +81,13 @@ export class AnthropicTextProvider implements TextProvider {
   async generate(req: GenerationRequest): Promise<AnthropicGenerationResult> {
     const model = resolveModel(req.tier);
 
-    const systemBlock = {
-      type: 'text' as const,
-      text: req.system,
-      cache_control: { type: 'ephemeral' as const },
-    };
-
-    // Cast required: cache_control is valid API field but absent from SDK 0.32 TextBlockParam types.
-    // exactOptionalPropertyTypes prevents indexed-access type assignment, so we use unknown cast.
-    const system = [systemBlock] as unknown as Anthropic.TextBlockParam[];
+    const system: Anthropic.TextBlockParam[] = [
+      {
+        type: 'text',
+        text: req.system,
+        cache_control: { type: 'ephemeral' },
+      },
+    ];
 
     const baseParams = {
       model,
@@ -80,9 +97,7 @@ export class AnthropicTextProvider implements TextProvider {
     };
 
     const params: Anthropic.MessageCreateParamsNonStreaming =
-      req.temperature !== undefined
-        ? { ...baseParams, temperature: req.temperature }
-        : baseParams;
+      req.temperature !== undefined ? { ...baseParams, temperature: req.temperature } : baseParams;
 
     const response = await this.client.messages.create(params);
 
@@ -92,10 +107,8 @@ export class AnthropicTextProvider implements TextProvider {
     const usage = response.usage;
     const inputTokens = usage.input_tokens;
     const outputTokens = usage.output_tokens;
-    // @ts-expect-error SDK typings may not include cache usage fields yet
-    const cacheCreationTokens: number = (usage as Record<string, unknown>)['cache_creation_input_tokens'] as number ?? 0;
-    // @ts-expect-error SDK typings may not include cache usage fields yet
-    const cacheReadTokens: number = (usage as Record<string, unknown>)['cache_read_input_tokens'] as number ?? 0;
+    const cacheCreationTokens: number = usage.cache_creation_input_tokens ?? 0;
+    const cacheReadTokens: number = usage.cache_read_input_tokens ?? 0;
 
     return {
       text,
