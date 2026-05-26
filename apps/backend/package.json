@@ -24,13 +24,13 @@
     "clean": "rimraf dist .turbo"
   },
   "dependencies": {
-    "@fastify/rate-limit": "^9.1.0",
-    "@fastify/websocket": "^10.0.1",
+    "@fastify/rate-limit": "^10.3.0",
+    "@fastify/websocket": "^11.2.0",
     "@gtarp/db": "workspace:*",
     "@gtarp/event-bus": "workspace:*",
     "@gtarp/event-schema": "workspace:*",
     "dotenv": "^16.4.5",
-    "fastify": "^4.28.1",
+    "fastify": "^5.8.5",
     "ioredis": "^5.6.1"
   },
   "devDependencies": {

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Fastify from 'fastify';
+import type { FastifyPluginCallback } from 'fastify';
 import websocket from '@fastify/websocket';
 import type { EventBus } from '@gtarp/event-bus';
 import { wsRoute } from './ws.js';
@@ -30,7 +31,7 @@ describe('wsRoute', () => {
 
   it('registers without error when FIVEM_INGEST_TOKEN is set', async () => {
     const app = Fastify();
-    await app.register(websocket);
+    await app.register(websocket as FastifyPluginCallback);
     await expect(app.register(wsRoute, { eventBus: makeBus() })).resolves.not.toThrow();
     await app.close();
   });
@@ -38,7 +39,7 @@ describe('wsRoute', () => {
   it('throws at registration if FIVEM_INGEST_TOKEN is missing', async () => {
     delete process.env['FIVEM_INGEST_TOKEN'];
     const app = Fastify();
-    await app.register(websocket);
+    await app.register(websocket as FastifyPluginCallback);
     await expect(app.register(wsRoute, { eventBus: makeBus() })).rejects.toThrow(
       /FIVEM_INGEST_TOKEN/,
     );
@@ -48,7 +49,7 @@ describe('wsRoute', () => {
   it('subscribes to gtarp.dispatch.requested on the event bus', async () => {
     const bus = makeBus();
     const app = Fastify();
-    await app.register(websocket);
+    await app.register(websocket as FastifyPluginCallback);
     await app.register(wsRoute, { eventBus: bus });
     expect(bus.subscribe).toHaveBeenCalledWith(
       'gtarp.dispatch.requested',
@@ -61,7 +62,7 @@ describe('wsRoute', () => {
   it('uses a per-instance durable name including the process pid', async () => {
     const bus = makeBus();
     const app = Fastify();
-    await app.register(websocket);
+    await app.register(websocket as FastifyPluginCallback);
     await app.register(wsRoute, { eventBus: bus });
     const opts = (bus.subscribe as unknown as { mock: { calls: unknown[][] } }).mock
       .calls[0]?.[2] as { durableName?: string } | undefined;
