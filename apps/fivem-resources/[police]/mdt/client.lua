@@ -66,6 +66,23 @@ RegisterNUICallback('replayAudio', function(data, cb)
   cb({ ok = true })
 end)
 
+RegisterNUICallback('makeArrest', function(data, cb)
+  if type(data.suspectServerId) ~= 'string' and type(data.suspectServerId) ~= 'number' then
+    cb({ ok = false })
+    return
+  end
+  if type(data.charges) ~= 'table' or #data.charges == 0 then
+    cb({ ok = false })
+    return
+  end
+  TriggerServerEvent('mdt:makeArrest', {
+    suspectServerId = tostring(data.suspectServerId),
+    charges         = data.charges,
+    incidentId      = data.incidentId,
+  })
+  cb({ ok = true })
+end)
+
 -- Server → client events
 RegisterNetEvent('mdt:incidentList', function(list)
   SendNUIMessage({ action = 'incidentList', incidents = list })
@@ -73,6 +90,10 @@ end)
 
 RegisterNetEvent('mdt:noteSaved', function(incidentId)
   SendNUIMessage({ action = 'noteSaved', incidentId = incidentId })
+end)
+
+RegisterNetEvent('mdt:arrestLogged', function(ok, errorMsg)
+  SendNUIMessage({ action = 'arrestLogged', ok = ok, error = errorMsg })
 end)
 
 -- Live push: ai_dispatch triggers this when a new incident arrives

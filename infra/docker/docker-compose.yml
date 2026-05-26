@@ -9,11 +9,11 @@ services:
       POSTGRES_PASSWORD: gtarp
       POSTGRES_DB: gtarp
     ports:
-      - "5432:5432"
+      - '5434:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gtarp"]
+      test: ['CMD-SHELL', 'pg_isready -U gtarp']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -22,11 +22,11 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - '6382:6379'
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -34,10 +34,10 @@ services:
   nats:
     image: nats:2.10-alpine
     restart: unless-stopped
-    command: ["-js", "-sd", "/data"]
+    command: ['-js', '-sd', '/data']
     ports:
-      - "4222:4222"
-      - "8222:8222"
+      - '4222:4222'
+      - '8222:8222'
     volumes:
       - nats_data:/data
 
@@ -45,8 +45,8 @@ services:
     image: mailhog/mailhog:latest
     restart: unless-stopped
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - '1025:1025'
+      - '8025:8025'
 
 volumes:
   postgres_data:

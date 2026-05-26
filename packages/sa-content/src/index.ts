@@ -232,6 +232,24 @@ export const DISPATCH_TEMPLATES: Record<string, string> = {
 };
 
 /**
+ * Inlined news headline templates — keyed by 3-digit ID.
+ * Consumed by the news engine in event-worker to generate headlines
+ * after a dispatch.requested event.
+ */
+export const NEWS_HEADLINE_TEMPLATES: Record<string, string> = {
+  '001':
+    'eGoli Crime Report: Brazen hijacking syndicate dismantled after month-long operation — {{name.given.m}} {{name.surname}} leads the bust',
+  '002':
+    'Mzansi Business: Controversial tender deal in {{name.surname}} municipality sparks community protests in the kasi',
+  '003':
+    'Breaking from the streets: Gang war erupts in Yeoville — residents urged to stay indoors as police flood the area',
+  '004':
+    'SAPS Quarterly Stats: Crime down 4% in Sandton, up 12% in townships — community leaders call for urgent action',
+  '005':
+    "eGoli Politics: Deputy Mayor {{name.given.m}} {{name.surname}} faces corruption charges — denies all allegations, says {{slang.casual}}, it's politically motivated",
+};
+
+/**
  * ElevenLabs voice ID for the PPS (Provincial Police Service) dispatcher.
  * Canonical voice for AI dispatch audio — change requires ADR.
  * Value is the ElevenLabs voice ID string; set ELEVENLABS_DISPATCH_VOICE_ID env to override.

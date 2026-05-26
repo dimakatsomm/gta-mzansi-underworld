@@ -33,6 +33,14 @@ window.addEventListener('message', (event) => {
     case 'noteSaved':
       showNoteSavedFeedback(msg.incidentId);
       break;
+    case 'arrestLogged': {
+      const statusEl = document.getElementById('arrest-status');
+      if (statusEl) {
+        statusEl.textContent = msg.ok ? 'Arrest logged ✓' : 'Error: ' + (msg.error || 'unknown');
+        statusEl.className = 'arrest-status' + (msg.ok ? ' success' : ' error');
+      }
+      break;
+    }
   }
 });
 
@@ -107,10 +115,70 @@ function renderDetail(id) {
     <span class="detail-notes-label">Case Notes</span>
     <textarea id="note-textarea" placeholder="Add your notes…">${escapeHtml(inc.notes || '')}</textarea>
     <button class="save-note-btn" id="save-note-btn">Save Note</button>
+    <div class="arrest-section">
+      <span class="detail-notes-label">Log Arrest</span>
+      <input id="arrest-suspect-id" type="number" min="1" max="255" placeholder="Suspect server ID (1–255)" />
+      <div class="charge-list" id="charge-list">
+        <!-- checkboxes rendered by JS -->
+      </div>
+      <button class="arrest-btn" id="arrest-btn">Log Arrest</button>
+      <span id="arrest-status" class="arrest-status"></span>
+    </div>
   `;
 
   document.getElementById('replay-btn').addEventListener('click', () => {
     if (inc.voiceUrl) playAudio(inc.voiceUrl);
+  });
+
+  const CHARGES = [
+    'hijack',
+    'robbery',
+    'assault',
+    'murder',
+    'drug_deal',
+    'firearm_trafficking',
+    'smuggling',
+    'money_laundering',
+    'corruption_bribe',
+  ];
+
+  const chargeList = document.getElementById('charge-list');
+  CHARGES.forEach((charge) => {
+    const label = document.createElement('label');
+    label.className = 'charge-item';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = charge;
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(' ' + charge.replace(/_/g, ' ')));
+    chargeList.appendChild(label);
+  });
+
+  document.getElementById('arrest-btn').addEventListener('click', () => {
+    const suspectId = document.getElementById('arrest-suspect-id').value.trim();
+    const charges = [...chargeList.querySelectorAll('input[type=checkbox]:checked')].map(
+      (cb) => cb.value,
+    );
+    const statusEl = document.getElementById('arrest-status');
+
+    if (!suspectId || isNaN(Number(suspectId))) {
+      statusEl.textContent = 'Enter a valid suspect server ID.';
+      statusEl.className = 'arrest-status error';
+      return;
+    }
+    if (charges.length === 0) {
+      statusEl.textContent = 'Select at least one charge.';
+      statusEl.className = 'arrest-status error';
+      return;
+    }
+
+    statusEl.textContent = 'Logging arrest…';
+    statusEl.className = 'arrest-status';
+
+    fetch('https://mdt/makeArrest', {
+      method: 'POST',
+      body: JSON.stringify({ suspectServerId: suspectId, charges, incidentId: inc.incidentId }),
+    });
   });
 
   document.getElementById('save-note-btn').addEventListener('click', () => {

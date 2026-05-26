@@ -45,3 +45,11 @@ ensure [ai]/ai_dispatch
 ensure [ai]/ai_witness
 ensure [police]/mdt
 ensure [ambient]/pharas
+
+# ── Voice ────────────────────────────────────────────────────────────────────
+# pma-voice is fetched into apps/fivem-resources/pma-voice via `pnpm fivem:deps`.
+ensure pma-voice
+
+# ── Server management ────────────────────────────────────────────────────────
+ensure [server]/whitelist
+ensure [server]/anticheat

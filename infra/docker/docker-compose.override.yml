@@ -1,0 +1,6 @@
+name: gtarp-dev
+
+services:
+  redis:
+    ports:
+      - '6382:6379'

@@ -5,6 +5,30 @@
 -- luacheck: globals exports TriggerClientEvent RegisterNetEvent AddEventHandler
 -- luacheck: globals source GetPlayers json math table string os QBX GetConvar
 -- luacheck: globals GetCurrentResourceName GetResourceKvpString SetResourceKvp
+-- luacheck: globals GetPlayerPed GetEntityCoords PerformHttpRequest GetGameTimer
+
+local BACKEND_URL  = GetConvar('BACKEND_URL', 'http://localhost:3001')
+local INGEST_TOKEN = GetConvar('FIVEM_INGEST_TOKEN', '')
+
+math.randomseed(os.time() + GetGameTimer())
+for _ = 1, 8 do math.random() end
+
+local function uuid4()
+  return string.format(
+    '%08x-%04x-4%03x-%04x-%012x',
+    math.random(0, 0xFFFFFFFF), math.random(0, 0xFFFF),
+    math.random(0, 0x0FFF), math.random(0x8000, 0xBFFF),
+    math.random(0, 0xFFFFFFFF)
+  )
+end
+
+local function deriveArea(x, y)
+  if x > 200 and y > 200   then return 'yeoville', 'GP' end
+  if x > 100 and y < 0     then return 'hillbrow', 'GP' end
+  if x < -200               then return 'soweto', 'GP'   end
+  if x > 400 and y < -500   then return 'sandton', 'GP'  end
+  return 'cbd', 'GP'
+end
 
 local MAX_INCIDENTS = 50   -- rolling window
 local incidents     = {}   -- array of incident objects, newest first
@@ -116,4 +140,111 @@ RegisterNetEvent('mdt:saveNote', function(incidentId, note)
       return
     end
   end
+end)
+
+local VALID_CHARGES = {
+  hijack=true, robbery=true, assault=true, murder=true,
+  drug_deal=true, firearm_trafficking=true, smuggling=true,
+  money_laundering=true, corruption_bribe=true,
+}
+
+RegisterNetEvent('mdt:makeArrest', function(data)
+  local officerId = source
+
+  local player = QBX and QBX.Functions and QBX.Functions.GetPlayer(officerId)
+  if not player then
+    TriggerClientEvent('mdt:arrestLogged', officerId, false, 'Unable to verify officer identity.')
+    return
+  end
+
+  local jobName = player.PlayerData and player.PlayerData.job and player.PlayerData.job.name
+  if jobName ~= 'police' and jobName ~= 'pps' then
+    TriggerClientEvent('mdt:arrestLogged', officerId, false, 'Officers only.')
+    return
+  end
+
+  if type(data) ~= 'table' then
+    TriggerClientEvent('mdt:arrestLogged', officerId, false, 'Invalid arrest payload.')
+    return
+  end
+
+  local suspectId = tostring(data.suspectServerId or '')
+  if not suspectId:match('^%d+$') then
+    TriggerClientEvent('mdt:arrestLogged', officerId, false, 'Invalid suspect ID.')
+    return
+  end
+  if suspectId == tostring(officerId) then
+    TriggerClientEvent('mdt:arrestLogged', officerId, false, 'Cannot arrest yourself.')
+    return
+  end
+
+  if type(data.charges) ~= 'table' or #data.charges == 0 then
+    TriggerClientEvent('mdt:arrestLogged', officerId, false, 'Select at least one charge.')
+    return
+  end
+
+  local validatedCharges = {}
+  for _, charge in ipairs(data.charges) do
+    if VALID_CHARGES[charge] then
+      table.insert(validatedCharges, charge)
+    end
+  end
+  if #validatedCharges == 0 then
+    TriggerClientEvent('mdt:arrestLogged', officerId, false, 'No valid charges.')
+    return
+  end
+
+  local ped = GetPlayerPed(officerId)
+  if not ped or ped <= 0 then
+    TriggerClientEvent('mdt:arrestLogged', officerId, false, 'Could not resolve officer location.')
+    return
+  end
+
+  local coords = GetEntityCoords(ped)
+  if not coords then
+    TriggerClientEvent('mdt:arrestLogged', officerId, false, 'Could not resolve officer location.')
+    return
+  end
+
+  local area, province = deriveArea(coords.x, coords.y)
+
+  local eventId   = uuid4()
+  local now       = os.date('!%Y-%m-%dT%H:%M:%SZ')
+  local incidentId = safeString(tostring(data.incidentId or ''), 64)
+
+  local payload = {
+    id         = eventId,
+    type       = 'arrest.made',
+    version    = 1,
+    occurredAt = now,
+    actor      = tostring(officerId),
+    data       = {
+      suspectId  = suspectId,
+      officerId  = tostring(officerId),
+      charges    = validatedCharges,
+      incidentId = incidentId,
+      location   = {
+        x        = coords.x,
+        y        = coords.y,
+        z        = coords.z,
+        province = province,
+        area     = area,
+      },
+    },
+  }
+
+  PerformHttpRequest(
+    BACKEND_URL .. '/events',
+    function(statusCode, _, _headers)
+      local ok = statusCode == 200 or statusCode == 201
+      TriggerClientEvent('mdt:arrestLogged', officerId, ok, ok and nil or ('HTTP ' .. tostring(statusCode)))
+    end,
+    'POST',
+    json.encode(payload),
+    {
+      ['Content-Type']         = 'application/json',
+      ['x-fivem-ingest-token'] = INGEST_TOKEN,
+      ['x-source-id']          = tostring(officerId),
+    }
+  )
 end)

@@ -15,6 +15,7 @@ const deps = [
   { name: 'ox_lib',       url: 'https://github.com/overextended/ox_lib',       tag: 'v3.14.0' },
   { name: 'ox_inventory', url: 'https://github.com/overextended/ox_inventory',  tag: 'v2.35.1' },
   { name: 'qbx_core',     url: 'https://github.com/Qbox-project/qbx_core',     tag: 'v1.37.0' },
+  { name: 'pma-voice',    url: 'https://github.com/AvarianKnight/pma-voice',   tag: 'v8.4.4' },
 ];
 
 for (const dep of deps) {
