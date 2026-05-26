@@ -1,5 +1,8 @@
 import { hostname } from 'node:os';
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
+// Value import required for @fastify/websocket module augmentation to apply
+// (RouteShorthandOptions.websocket, WebsocketHandler types) with verbatimModuleSyntax.
+import '@fastify/websocket';
 import type { WebSocket } from '@fastify/websocket';
 import type { EventBus, Subscription } from '@gtarp/event-bus';
 import type { DispatchRequested } from '@gtarp/event-schema';

@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyPluginCallback } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
+import type { RateLimitPluginOptions } from '@fastify/rate-limit';
 import websocket from '@fastify/websocket';
 import type { PrismaClient } from '@gtarp/db';
 import type { EventBus } from '@gtarp/event-bus';
@@ -27,7 +28,13 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<Fastif
   // — gating it together meant /ws/fivem was silently disabled in eventBus-only
   // deployments (e.g. read-only replicas, integration test harnesses).
   if (opts.redis) {
-    await app.register(rateLimit, { global: false, redis: opts.redis });
+    // Cast: Fastify v5 FastifyRegister doesn't thread the instance TypeProvider
+    // into its overloads (TypeProviderDefault stays FastifyTypeProvider). Cast to
+    // FastifyPluginCallback<Options> so TypeProvider infers as FastifyTypeProviderDefault.
+    await app.register(rateLimit as FastifyPluginCallback<RateLimitPluginOptions>, {
+      global: false,
+      redis: opts.redis,
+    });
   }
   if (opts.prisma && opts.eventBus) {
     await app.register(eventsRoute, { prisma: opts.prisma, eventBus: opts.eventBus });
@@ -37,7 +44,7 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<Fastif
     await app.register(policeRoute, { prisma: opts.prisma });
   }
   if (opts.eventBus) {
-    await app.register(websocket);
+    await app.register(websocket as FastifyPluginCallback);
     await app.register(wsRoute, { eventBus: opts.eventBus });
   }
 
