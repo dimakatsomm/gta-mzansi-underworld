@@ -1,4 +1,4 @@
-# Copilot Instructions — GTA RP
+# Copilot Instructions — Mzansi Underworld
 
 This file is auto-loaded by GitHub Copilot Chat when `github.copilot.chat.codeGeneration.useInstructionFiles` is true.
 

@@ -1,4 +1,4 @@
-# GTA RP — Production Deployment Guide
+# Mzansi Underworld — Production Deployment Guide
 
 Target: Fresh Ubuntu 24.04 LTS (Hetzner CX or AX series recommended — min 4 vCPU / 8 GB RAM).
 
@@ -30,8 +30,8 @@ npm install -g pm2
 ## 2. Clone & Configure
 
 ```bash
-git clone https://github.com/your-org/gtarp.git /opt/gtarp
-cd /opt/gtarp
+git clone https://github.com/your-org/gta-mzansi-underworld.git /opt/gta-mzansi-underworld
+cd /opt/gta-mzansi-underworld
 
 # Copy and fill in the production env file
 cp infra/docker/.env.production.example infra/docker/.env.production
@@ -53,7 +53,7 @@ Also update `DATABASE_URL` to match the new `POSTGRES_PASSWORD`.
 ## 3. Start Infrastructure
 
 ```bash
-cd /opt/gtarp
+cd /opt/gta-mzansi-underworld
 
 docker compose \
   -f infra/docker/docker-compose.production.yml \
@@ -71,7 +71,7 @@ Expected: postgres, redis, nats, node-exporter, and prometheus all show `healthy
 ## 4. Run Database Migrations
 
 ```bash
-cd /opt/gtarp
+cd /opt/gta-mzansi-underworld
 
 # Install workspace dependencies
 pnpm install --frozen-lockfile
@@ -88,7 +88,7 @@ pnpm --filter @gtarp/db prisma:deploy
 ## 5. Start Application Services
 
 ```bash
-cd /opt/gtarp
+cd /opt/gta-mzansi-underworld
 
 # Build all packages
 pnpm build
@@ -126,7 +126,7 @@ wget https://runtime.fivem.net/artifacts/fivem/build_proot_linux/master/<build>/
 tar -xf fx.tar.xz
 
 # Copy the server config template (adjust path as needed)
-cp /opt/gtarp/apps/fivem-resources/server.cfg.template /opt/fivem/server.cfg
+cp /opt/gta-mzansi-underworld/apps/fivem-resources/server.cfg.template /opt/fivem/server.cfg
 
 # Edit server.cfg — fill in at minimum:
 #   sv_licenseKey  (matches SV_LICENCEKEY in .env.production)

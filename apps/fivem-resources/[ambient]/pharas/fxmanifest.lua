@@ -3,7 +3,7 @@ game 'gta5'
 
 name        'pharas'
 description 'Pharas — ambient drug-addict NPCs scaling with area criminal reputation'
-author      'GTA-RP Team'
+author      'Mzansi Underworld Team'
 version     '1.0.0'
 
 shared_scripts { '@ox_lib/init.lua' }

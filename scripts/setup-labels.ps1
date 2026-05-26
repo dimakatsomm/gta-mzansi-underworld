@@ -1,8 +1,8 @@
 # Idempotent label setup for the GitHub repo.
-# Usage: pwsh ./scripts/setup-labels.ps1 [-Repo dimakatsomm/GTA-RP]
+# Usage: pwsh ./scripts/setup-labels.ps1 [-Repo dimakatsomm/gta-mzansi-underworld]
 
 param(
-    [string]$Repo = "dimakatsomm/GTA-RP"
+    [string]$Repo = "dimakatsomm/gta-mzansi-underworld"
 )
 
 $labels = @(

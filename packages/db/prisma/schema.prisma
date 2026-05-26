@@ -1,4 +1,4 @@
-// Prisma schema for GTA RP. Source of truth for persistent state.
+// Prisma schema for Mzansi Underworld. Source of truth for persistent state.
 // EventLog row content (id, type, payload, occurredAt, actor, correlationId)
 // is append-only — do not mutate the recorded event. The `published` flag is
 // the single exception: it is a publish-receipt bit flipped false→true exactly

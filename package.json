@@ -1,8 +1,8 @@
 {
-  "name": "gta-rp",
+  "name": "gta-mzansi-underworld",
   "version": "0.0.0",
   "private": true,
-  "description": "AI-powered South African GTA RP server — monorepo root",
+  "description": "AI-powered South African Mzansi Underworld server — monorepo root",
   "packageManager": "pnpm@9.12.0",
   "engines": {
     "node": ">=20.11.0",

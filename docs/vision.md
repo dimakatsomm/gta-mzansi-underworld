@@ -1,4 +1,4 @@
-# Vision — AI-Powered South African GTA RP Server
+# Vision — AI-Powered South African Mzansi Underworld Server
 
 > Master vision. Source for ADRs, lore, and Phase 1 plan.
 
@@ -8,7 +8,7 @@ Candidates: Mzansi Underworld RP, Sovereign RP, Jozi State RP, Nine Province RP.
 
 ## Core product vision
 
-An AI-powered South African-inspired GTA RP ecosystem where:
+An AI-powered South African-inspired Mzansi Underworld ecosystem where:
 
 - Crime is the center of the world.
 - Police, business, politics react dynamically.
@@ -78,7 +78,7 @@ VIP subs (Stripe), founder packages, in-game business ownership. No P2W. See ADR
 ## Long-term phases
 
 - Phase 1 — AI-powered SA RP server (this plan).
-- Phase 2 — recognized GTA RP ecosystem; local AI inference.
+- Phase 2 — recognized Mzansi Underworld ecosystem; local AI inference.
 - Phase 3 — AI middleware platform for RP worlds.
 - Phase 4 — cross-game AI social simulation engine.
 

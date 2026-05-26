@@ -3,7 +3,7 @@ game 'gta5'
 
 name        'mdt'
 description 'Police Mobile Data Terminal — NUI incident list, case notes, dispatch audio replay'
-author      'GTA-RP Team'
+author      'Mzansi Underworld Team'
 version     '1.0.0'
 
 shared_scripts {

@@ -3,7 +3,7 @@ game 'gta5'
 
 name        'ai_witness'
 description 'AI Witness system — NPC witnesses observe crimes and send statements to backend'
-author      'GTA-RP Team'
+author      'Mzansi Underworld Team'
 version     '1.0.0'
 
 shared_scripts {

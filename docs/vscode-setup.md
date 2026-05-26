@@ -11,7 +11,7 @@
 ## First-time setup
 
 ```powershell
-# from C:\GTA RP
+# from C:\gta-mzansi-underworld
 pnpm install
 pnpm -F @gtarp/db prisma:generate
 docker compose -f infra/docker/docker-compose.yml up -d
@@ -26,21 +26,22 @@ code .
 
 On first open, VS Code will offer to install the recommended extensions (`.vscode/extensions.json`). Accept all. The key ones:
 
-| Extension                              | Purpose                                       |
-|----------------------------------------|-----------------------------------------------|
-| GitHub.copilot + copilot-chat          | Agent + chat                                  |
-| Prisma.prisma                          | Schema editing                                |
-| dbaeumer.vscode-eslint                 | ESLint flat config                            |
-| esbenp.prettier-vscode                 | Format on save                                |
-| bradlc.vscode-tailwindcss              | Tailwind autocompletion (M0 web stub)         |
-| sumneko.lua + overextended.cfxlua-vscode | FiveM Lua intellisense                     |
-| vitest.explorer                        | Test runner UI                                |
-| usernamehw.errorlens                   | Inline error overlay                          |
-| streetsidesoftware.code-spell-checker  | Catches typos; SA lexicon preloaded           |
+| Extension                                | Purpose                               |
+| ---------------------------------------- | ------------------------------------- |
+| GitHub.copilot + copilot-chat            | Agent + chat                          |
+| Prisma.prisma                            | Schema editing                        |
+| dbaeumer.vscode-eslint                   | ESLint flat config                    |
+| esbenp.prettier-vscode                   | Format on save                        |
+| bradlc.vscode-tailwindcss                | Tailwind autocompletion (M0 web stub) |
+| sumneko.lua + overextended.cfxlua-vscode | FiveM Lua intellisense                |
+| vitest.explorer                          | Test runner UI                        |
+| usernamehw.errorlens                     | Inline error overlay                  |
+| streetsidesoftware.code-spell-checker    | Catches typos; SA lexicon preloaded   |
 
 ## Running things
 
 **Tasks** (`Ctrl+Shift+P → Tasks: Run Task`):
+
 - `infra: up` / `infra: down`
 - `pnpm: dev (all)` — all apps in watch
 - `ci: full` — lint + typecheck + test + build (matches CI)
@@ -48,6 +49,7 @@ On first open, VS Code will offer to install the recommended extensions (`.vscod
 - `prisma: migrate dev`
 
 **Debug** (`F5` or Run panel):
+
 - Per-app launch configs
 - Compound `stack: backend + ai-orchestrator + event-worker`
 - `vitest: current file`
@@ -57,12 +59,15 @@ On first open, VS Code will offer to install the recommended extensions (`.vscod
 Copilot in VS Code has three modes for this repo:
 
 ### 1. Inline (autocomplete)
+
 Just type. Copilot suggests. Bound by `AGENTS.md` because `github.copilot.chat.codeGeneration.useInstructionFiles` is on and points to `AGENTS.md` + `.github/copilot/AGENTS.md` (see `.vscode/settings.json`).
 
 ### 2. Chat (Ctrl+Alt+I)
+
 Ask questions. Reference files with `#file:path`. Reference symbols with `#sym:Name`. The `@workspace` agent has whole-repo context.
 
 Examples:
+
 ```
 @workspace explain how dispatch events flow from FiveM to discord-bot per the plan in #file:docs/copilot-issues/m3-mvp-vertical.md
 ```
@@ -72,9 +77,11 @@ Examples:
 ```
 
 ### 3. Agent mode (Ctrl+Shift+I, click the Agent toggle)
+
 Multi-turn, multi-file. Best for landing a full issue as one PR. Paste a Copilot issue body from `docs/copilot-issues/` directly.
 
 ### Kickoff prompt
+
 First task to give the agent: paste `docs/copilot-issues/KICKOFF-PROMPT.md` into Agent mode. It implements all M0 remainders.
 
 ## After the first PR lands
