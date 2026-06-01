@@ -19,7 +19,7 @@
     "clean": "rimraf dist .turbo"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.98.0",
+    "@anthropic-ai/sdk": "^0.100.1",
     "@gtarp/shared-types": "workspace:*",
     "openai": "^4.73.0"
   },
