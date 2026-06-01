@@ -23,7 +23,7 @@
     "fivem:update": "git submodule update --init --recursive apps/fivem-resources/ox_lib apps/fivem-resources/ox_inventory apps/fivem-resources/qbx_core"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^25.9.1",
     "@typescript-eslint/eslint-plugin": "^8.15.0",
     "@typescript-eslint/parser": "^8.15.0",
